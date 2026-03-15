@@ -116,6 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'hero.cta1': 'Explore Programs',
             'hero.cta2': 'About the Director',
             'about.title': 'Dr. Dong-Yeop Jung\'s<br><span>Job Future Institute</span>',
+            'about.name': 'Dong-Yeop Jung',
+            'about.role': 'PhD in Vocational Studies · Director, Job Future Institute',
             'about.lead': '"I research future society and the world of work, helping all generations — youth, adults, and baby boomer retirees — with career planning and career transition. With 20+ years in IT, I am a practitioner who integrates educational technology with career consulting."',
             'about.body1': 'Director Jung Dong-yeop holds a PhD coursework completion in Vocational Studies from Kyonggi University, an MA in Employment & Vocational Counseling from Gachon University, and an MEd in Learning Coaching from the International Graduate School of Culture. He also serves as a WorkNet vocational psychology specialist and online counselor for youth.',
             'about.body2': 'With 20+ years in IT — including academic information systems and e-learning platform design at Kyohaksa and Sambo Computer — he currently works as a professional consultant in career planning, career transition, resume/interview coaching, and social contribution education.',
