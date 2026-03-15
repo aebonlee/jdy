@@ -274,4 +274,24 @@ document.addEventListener('DOMContentLoaded', () => {
             setLanguage(currentLang === 'ko' ? 'en' : 'ko');
         });
     }
+
+    // ══════════════════════════════════════
+    // ── Theme: Dark / Light Toggle ──
+    // ══════════════════════════════════════
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme');
+
+    // Apply saved theme or default to light
+    if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        });
+    }
 });
