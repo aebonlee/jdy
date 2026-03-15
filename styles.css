@@ -176,6 +176,13 @@ img {
     gap: 32px;
 }
 
+/* Nav Toggle Button Group */
+.nav-toggles {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 /* Language Toggle Button */
 .lang-toggle {
     display: inline-flex;
@@ -561,6 +568,11 @@ img {
 
 [data-theme="dark"] .program-icon {
     background: rgba(6, 182, 212, 0.1);
+    color: var(--accent-light);
+}
+
+[data-theme="dark"] .cert-icon {
+    color: var(--accent);
 }
 
 [data-theme="dark"] .sub-heading {
@@ -981,12 +993,34 @@ img {
 }
 
 .cert-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-size: 0.9rem;
     color: var(--text);
     padding: 10px 16px;
     background: rgba(26, 86, 219, 0.04);
     border-radius: var(--radius-sm);
     border-left: 3px solid var(--primary);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cert-item:hover {
+    transform: translateX(4px);
+}
+
+.cert-icon {
+    color: var(--primary);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.cert-item:hover .cert-icon {
+    transform: scale(1.2);
+    color: var(--accent);
 }
 
 .stats-row {
@@ -1131,6 +1165,11 @@ img {
     background: linear-gradient(135deg, rgba(26, 86, 219, 0.2), rgba(6, 182, 212, 0.2));
     border-radius: 12px;
     margin-bottom: 20px;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover .icon-wrapper {
+    transform: scale(1.1) rotate(-5deg);
 }
 
 .feature-icon {
@@ -1211,7 +1250,8 @@ img {
 }
 
 .program-icon {
-    font-size: 1.6rem;
+    font-size: 1.2rem;
+    color: var(--primary);
     flex-shrink: 0;
     width: 44px;
     height: 44px;
@@ -1220,6 +1260,12 @@ img {
     justify-content: center;
     background: rgba(26, 86, 219, 0.08);
     border-radius: 10px;
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.program-item:hover .program-icon {
+    transform: scale(1.1) rotate(-5deg);
+    background: rgba(26, 86, 219, 0.15);
 }
 
 .program-item h4 {
@@ -1265,7 +1311,14 @@ img {
     border-radius: 50px;
     font-size: 0.88rem;
     color: var(--text-light-dim);
-    transition: all var(--transition);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.4s ease, transform 0.4s ease, background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.client-badge.badge-visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .client-badge:hover {
@@ -1288,6 +1341,7 @@ img {
 .effect-icon {
     font-size: 2rem;
     margin-bottom: 16px;
+    color: var(--accent-light);
 }
 
 .effect-card h4 {
@@ -1312,11 +1366,13 @@ img {
 }
 
 .effect-card li::before {
-    content: '✓';
+    content: '\f00c';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
     position: absolute;
     left: 0;
     color: var(--accent);
-    font-weight: 700;
+    font-size: 0.75rem;
 }
 
 .effect-card li strong {
@@ -1488,6 +1544,79 @@ img {
     padding: 24px 0;
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── History Block Title Icon ── */
+.history-block-title i {
+    color: var(--accent);
+    margin-right: 6px;
+}
+
+/* ── Scroll Progress Bar ── */
+.scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    z-index: 1100;
+    width: 0%;
+}
+
+/* ── Back to Top Button ── */
+.back-to-top {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    z-index: 999;
+}
+
+.back-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.back-to-top:hover {
+    background: var(--primary-light);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Active Nav Link ── */
+.nav-links a.active:not(.btn) {
+    color: var(--accent-light) !important;
+}
+
+.navbar.scrolled .nav-links a.active:not(.btn) {
+    color: var(--primary) !important;
+    font-weight: 700;
+}
+
+/* ── Career Dot Pulse ── */
+@keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 0 3px var(--primary); }
+    50% { box-shadow: 0 0 0 6px rgba(26, 86, 219, 0.2); }
+}
+
+.career-dot {
+    animation: dotPulse 2.5s ease infinite;
 }
 
 /* ── Animations ── */

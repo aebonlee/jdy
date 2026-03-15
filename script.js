@@ -119,13 +119,13 @@ document.addEventListener('DOMContentLoaded', () => {
             'about.lead': '"I research future society and the world of work, helping all generations — youth, adults, and baby boomer retirees — with career planning and career transition. With 20+ years in IT, I am a practitioner who integrates educational technology with career consulting."',
             'about.body1': 'Director Jung Dong-yeop holds a PhD coursework completion in Vocational Studies from Kyonggi University, an MA in Employment & Vocational Counseling from Gachon University, and an MEd in Learning Coaching from the International Graduate School of Culture. He also serves as a WorkNet vocational psychology specialist and online counselor for youth.',
             'about.body2': 'With 20+ years in IT — including academic information systems and e-learning platform design at Kyohaksa and Sambo Computer — he currently works as a professional consultant in career planning, career transition, resume/interview coaching, and social contribution education.',
-            'about.cert1': '🎓 Kyonggi Univ. PhD Coursework in Vocational Studies (2024)',
-            'about.cert2': '🎓 Gachon Univ. MA in Employment & Vocational Counseling (2014)',
-            'about.cert3': '🎓 International Culture Grad School — MEd in Learning Coaching (2012)',
-            'about.cert4': '🎓 Busan Univ. of Foreign Studies — BS in Computer Engineering (1994)',
-            'about.cert5': '📚 Author: "The Future of Thinking" (2016) · Gangseo Social Economy textbook',
-            'about.cert6': '📋 Korean Language Instructor Lv.2 · Social Worker Lv.2 · Lifelong Educator Lv.2 · Vocational Trainer Lv.3',
-            'about.cert7': '🧠 Vocational Psychology Specialist · Freditger Instructor · Halftime Coach (Life Transition)',
+            'about.cert1': 'Kyonggi Univ. PhD Coursework in Vocational Studies (2024)',
+            'about.cert2': 'Gachon Univ. MA in Employment & Vocational Counseling (2014)',
+            'about.cert3': 'International Culture Grad School — MEd in Learning Coaching (2012)',
+            'about.cert4': 'Busan Univ. of Foreign Studies — BS in Computer Engineering (1994)',
+            'about.cert5': 'Author: "The Future of Thinking" (2016) · Gangseo Social Economy textbook',
+            'about.cert6': 'Korean Language Instructor Lv.2 · Social Worker Lv.2 · Lifelong Educator Lv.2 · Vocational Trainer Lv.3',
+            'about.cert7': 'Vocational Psychology Specialist · Freditger Instructor · Halftime Coach (Life Transition)',
             'about.stat1': 'Yrs IT Exp.',
             'about.stat2': 'Degrees',
             'about.stat3': 'Certifications+',
@@ -180,13 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
             'prog.6.desc': 'Tailored education for government agencies, universities, education offices, and companies — 4th Industrial Rev., big data, social contribution, and more.',
             'history.title': 'Track Record & <span>Expected Impact</span>',
             'history.desc': 'A proven futures & career education expert at major universities, public institutions, and education offices nationwide.',
-            'history.univ': '🏫 Key University Lectures',
+            'history.univ': 'Key University Lectures',
             'history.u1': 'Dong-ah Institute of Media and Arts (Adjunct Prof.)',
             'history.u2': 'Jeju Tourism University',
-            'history.org': '🏢 Key Partner Organizations & Companies',
-            'history.edu': '🏛️ Education Office Special Lectures',
+            'history.org': 'Key Partner Organizations & Companies',
+            'history.edu': 'Education Office Special Lectures',
             'history.edu.etc': 'and 8 more regional offices',
-            'history.topics': '📋 Key Lecture Topics',
+            'history.topics': 'Key Lecture Topics',
             'history.t1': '4th Industrial Revolution & Work Changes',
             'history.t2': 'Futures-Based Strategic Consulting & Vision',
             'history.t3': 'K-Digital Big Data & Data Preprocessing',
@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'effect.i2': 'Improved <strong>employment rate & satisfaction</strong> for students and job seekers',
             'effect.i3': '<strong>Tangible results</strong> reflecting 4th Industrial Revolution trends',
             'effect.i4': 'Staff & consultant <strong>professional competency co-growth</strong>',
-            'history.certs': '🏅 Professional Certifications & Activities',
+            'history.certs': 'Professional Certifications & Activities',
             'cta.title': 'Start Designing<br>Your Career Future Today',
             'cta.desc': 'We welcome 1:1 coaching and institutional lecture inquiries.<br>Your career, completed with vocational research and IT field experience.',
             'cta.kakao': 'KakaoTalk Chat',
@@ -341,4 +341,92 @@ document.addEventListener('DOMContentLoaded', () => {
             colorDropdown.classList.remove('active');
         });
     }
+
+    // ══════════════════════════════════════
+    // ── Scroll Progress Bar ──
+    // ══════════════════════════════════════
+    const scrollProgress = document.getElementById('scrollProgress');
+    function updateScrollProgress() {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        if (docHeight > 0 && scrollProgress) {
+            scrollProgress.style.width = (scrollTop / docHeight) * 100 + '%';
+        }
+    }
+    window.addEventListener('scroll', updateScrollProgress);
+
+    // ══════════════════════════════════════
+    // ── Back to Top Button ──
+    // ══════════════════════════════════════
+    const backToTop = document.getElementById('backToTop');
+    if (backToTop) {
+        window.addEventListener('scroll', () => {
+            backToTop.classList.toggle('visible', window.scrollY > 500);
+        });
+        backToTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    // ══════════════════════════════════════
+    // ── Active Nav Link Highlighting ──
+    // ══════════════════════════════════════
+    const allSections = document.querySelectorAll('section[id]');
+    const navAnchors = document.querySelectorAll('.nav-links a[href^="#"]');
+
+    function highlightActiveNav() {
+        let current = '';
+        allSections.forEach(section => {
+            const sectionTop = section.offsetTop - 120;
+            if (window.scrollY >= sectionTop) {
+                current = section.getAttribute('id');
+            }
+        });
+        navAnchors.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    }
+    window.addEventListener('scroll', highlightActiveNav);
+
+    // ══════════════════════════════════════
+    // ── Staggered Badge Animation ──
+    // ══════════════════════════════════════
+    const clientGrids = document.querySelectorAll('.client-grid');
+    const badgeObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const badges = entry.target.querySelectorAll('.client-badge');
+                badges.forEach((badge, i) => {
+                    setTimeout(() => {
+                        badge.classList.add('badge-visible');
+                    }, i * 60);
+                });
+                badgeObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15 });
+
+    clientGrids.forEach(grid => badgeObserver.observe(grid));
+
+    // ══════════════════════════════════════
+    // ── Hero Parallax (subtle) ──
+    // ══════════════════════════════════════
+    const heroContent = document.querySelector('.hero-content');
+    const scrollIndicator = document.querySelector('.scroll-indicator');
+    function heroParallax() {
+        const scrollY = window.scrollY;
+        const heroH = window.innerHeight;
+        if (scrollY < heroH && heroContent) {
+            const ratio = scrollY / heroH;
+            heroContent.style.transform = 'translateY(' + (scrollY * 0.2) + 'px)';
+            heroContent.style.opacity = 1 - ratio * 0.7;
+        }
+        if (scrollIndicator) {
+            scrollIndicator.style.opacity = 1 - (window.scrollY / 200);
+        }
+    }
+    window.addEventListener('scroll', heroParallax);
 });

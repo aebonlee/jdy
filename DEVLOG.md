@@ -387,4 +387,57 @@ D:\jdy\
 - 두 시스템이 독립 데이터 속성으로 동작하여 충돌 없음
 
 ---
+
+## 2026-03-15 (Day 1 - Update 11) — Font Awesome 아이콘 교체 & JS 인터랙션 강화
+
+### 작업 내역
+
+#### 1. Font Awesome 6 아이콘 도입
+- Font Awesome 6.5.1 CDN 추가
+- 사이트 전체의 이모지를 Font Awesome 아이콘으로 교체하여 "AI 생성 느낌" 제거
+
+| 영역 | 이모지 → FA 아이콘 |
+|------|---------------------|
+| 학력 (cert) | 🎓 → `fa-graduation-cap` |
+| 저서 | 📚 → `fa-book` |
+| 자격증 | 📋 → `fa-clipboard-list` |
+| 심리 전문 | 🧠 → `fa-brain` |
+| 프로그램 | 🔬📄🔄🚀📊🎓 → `fa-microscope`, `fa-file-lines`, `fa-arrows-rotate`, `fa-rocket`, `fa-chart-bar`, `fa-graduation-cap` |
+| 출강 대학 | 🏫 → `fa-school` |
+| 출강 기관 | 🏢 → `fa-building` |
+| 교육청 | 🏛️ → `fa-landmark` |
+| 강의 주제 | 📋 → `fa-clipboard-list` |
+| 전문 자격 | 🏅 → `fa-award` |
+| 기대효과 | 💪🏛️ → `fa-chart-line`, `fa-building-columns` |
+| 체크마크 | ✓ → FA `\f00c` (Font Awesome 체크) |
+
+#### 2. 네비게이션 토글 버튼 그룹화
+- EN, 해/달, 팔레트 3개 버튼을 `.nav-toggles` div로 그룹핑
+- 버튼 간격: `gap: 6px` (기존 32px → 6px)
+
+#### 3. CSS 아이콘 인터랙션 효과 추가
+- `.cert-item` hover 시 아이콘 확대 + 색상 변경 (`scale(1.2)`, accent 컬러)
+- `.program-icon` hover 시 회전 + 확대 (`scale(1.1) rotate(-5deg)`)
+- `.icon-wrapper` (특장점 카드) hover 시 회전 + 확대
+- `.career-dot` 타임라인 점 펄스 애니메이션 (`dotPulse` keyframe)
+- 체크마크 `li::before` Font Awesome 폰트로 전환
+
+#### 4. JavaScript 효과 추가
+
+| 효과 | 설명 |
+|------|------|
+| 스크롤 진행 바 | 페이지 상단 3px 프로그레스 라인 (primary → accent 그라디언트) |
+| Back-to-Top 버튼 | 500px 스크롤 시 우하단에 화살표 버튼 표시, 클릭 시 최상단 이동 |
+| 네비 활성 링크 | 현재 보고 있는 섹션의 네비 메뉴 자동 하이라이트 |
+| 뱃지 순차 등장 | 강의이력 뱃지들이 60ms 간격으로 순서대로 페이드인 (staggered) |
+| 히어로 패럴랙스 | 스크롤 시 히어로 콘텐츠 서서히 위로 이동 + 투명도 감소 |
+
+#### 5. i18n 번역 업데이트
+- 영어 번역에서 이모지 접두사 제거 (아이콘이 별도 `<i>` 요소로 분리되었으므로)
+- `data-i18n` 속성을 `<span>` 내부로 이동 (아이콘과 텍스트 분리)
+
+#### 6. 다크 테마 아이콘 대응
+- `.cert-icon`, `.program-icon` 다크 모드에서 accent 컬러로 전환
+
+---
 *Updated on 2026-03-15*
