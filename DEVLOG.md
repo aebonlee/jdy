@@ -164,9 +164,53 @@ D:\jdy\
 - CTA 버튼: mailto 및 tel 링크 연결
 
 ### 추후 작업 예정
-- [ ] 프로필 사진 (`assets/profile.jpg`) 추가
-- [ ] OG 이미지 (`assets/og-image.png`) 제작 및 업로드
+- [x] ~~프로필 사진 추가~~ → Update 4에서 완료
+- [x] ~~OG 이미지 설정~~ → Update 4에서 완료
 - [ ] GitHub Pages 배포 확인 및 활성화
+
+---
+
+## 2026-03-15 (Day 1 - Update 4) — 프로필 사진 반영 & OG 이미지 · 커스텀 도메인 정비
+
+### 작업 내역
+
+#### 1. 프로필 사진 변경
+- GitHub에 업로드된 `jdy.jpg`를 프로필 이미지로 연결
+- `assets/profile.jpg` → `jdy.jpg`로 경로 변경
+
+#### 2. Open Graph 이미지 & URL 정비
+커스텀 도메인(`jdy.dreamitbiz.com`)에 맞게 OG 태그 전체 업데이트:
+
+| 태그 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| `og:url` | `https://aebonlee.github.io/jdy/` | `https://jdy.dreamitbiz.com/` |
+| `og:image` | `assets/og-image.png` (미존재) | `https://jdy.dreamitbiz.com/jdy.jpg` |
+
+- `og:image:width`, `og:image:height` 메타 태그 추가
+- Twitter Card 메타 태그(`summary_large_image`) 추가 — 트위터/X 공유 미리보기 대응
+
+#### 3. 카카오톡 미리보기 적용 가이드
+- OG 이미지로 `jdy.jpg` (프로필 사진) 사용
+- 배포 후 카카오 디버거에서 캐시 초기화 필요:
+  https://developers.kakao.com/tool/debugger/sharing
+  → URL: `https://jdy.dreamitbiz.com/` 입력 후 "캐시 초기화" 클릭
+
+### OG 태그 최종 상태
+
+| 태그 | 값 |
+|------|-----|
+| `og:url` | `https://jdy.dreamitbiz.com/` |
+| `og:title` | 직업미래연구소 \| 정동엽 직업학박사 |
+| `og:description` | 직업학박사 정동엽. 미래사회와 직업세계 연구... |
+| `og:type` | website |
+| `og:image` | `https://jdy.dreamitbiz.com/jdy.jpg` |
+| `og:site_name` | 직업미래연구소 |
+| `twitter:card` | summary_large_image |
+
+### 추후 작업 예정
+- [ ] DNS 설정 확인 (`jdy.dreamitbiz.com` → GitHub Pages)
+- [ ] 카카오 디버거 캐시 초기화 후 미리보기 확인
+- [ ] 별도 OG 전용 이미지(1200x630px) 제작 시 교체
 
 ---
 *Updated on 2026-03-15*
