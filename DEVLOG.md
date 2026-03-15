@@ -74,4 +74,37 @@ D:\jdy\
 - [ ] Google Analytics 연동
 
 ---
-*Generated on 2026-03-15*
+
+## 2026-03-15 (Day 1 - Update 2) — 배포 설정 & OG 태그 정비
+
+### 작업 내역
+
+#### 1. GitHub Pages 배포 설정
+- `.github/workflows/deploy.yml` 생성
+- GitHub Actions 기반 자동 배포 워크플로우 구성
+  - `main` 브랜치 push 시 자동 배포
+  - `actions/upload-pages-artifact@v3` + `actions/deploy-pages@v4` 사용
+- 배포 URL: `https://aebonlee.github.io/jdy/`
+
+#### 2. Open Graph (OG) 메타 태그 정비
+카카오톡, 슬랙 등 SNS 공유 시 미리보기에 표시되는 정보:
+
+| 태그 | 값 |
+|------|-----|
+| `og:url` | `https://aebonlee.github.io/jdy/` |
+| `og:title` | 직업미래연구소 \| 정동엽 직업학박사 |
+| `og:description` | 직업학박사 정동엽. 직업·진로·커리어 컨설팅, AI 기반 취업전략, 직업미래 연구 및 교육 전문기관. |
+| `og:type` | website |
+| `og:image` | `https://aebonlee.github.io/jdy/assets/og-image.png` |
+| `og:site_name` | 직업미래연구소 |
+
+> **참고**: `og:image`에 사용할 이미지(`assets/og-image.png`)는 1200x630px 권장. 추후 추가 필요.
+> 카카오 OG 캐시 초기화: https://developers.kakao.com/tool/debugger/sharing
+
+### 추후 작업 예정
+- [ ] GitHub 리포지토리 Settings → Pages → Source를 "GitHub Actions"로 설정
+- [ ] OG 이미지 (`assets/og-image.png`) 제작 및 업로드
+- [ ] 카카오 디버거에서 OG 캐시 초기화 확인
+
+---
+*Updated on 2026-03-15*
