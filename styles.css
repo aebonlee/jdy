@@ -258,6 +258,182 @@ img {
 [data-theme="dark"] .theme-toggle .sun { opacity: 0; transform: rotate(90deg); }
 [data-theme="dark"] .theme-toggle .moon { opacity: 1; transform: rotate(0deg); }
 
+/* ── Color Picker ── */
+.color-picker-wrap {
+    position: relative;
+}
+
+.color-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition: all var(--transition);
+    flex-shrink: 0;
+}
+
+.color-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.05);
+}
+
+.navbar.scrolled .color-toggle {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(26, 86, 219, 0.06);
+}
+
+.navbar.scrolled .color-toggle:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+[data-theme="dark"] .navbar.scrolled .color-toggle {
+    border-color: var(--accent);
+    color: var(--accent-light);
+    background: rgba(6, 182, 212, 0.08);
+}
+
+[data-theme="dark"] .navbar.scrolled .color-toggle:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+.color-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.25s ease;
+    z-index: 1001;
+}
+
+.color-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: none;
+    cursor: pointer;
+    padding: 3px;
+    transition: all 0.2s ease;
+}
+
+.color-swatch span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.color-swatch:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.15);
+}
+
+.color-swatch.active {
+    border-color: #fff;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+/* ── Color Themes ── */
+[data-color="emerald"] {
+    --primary: #059669;
+    --primary-light: #10b981;
+    --primary-dark: #065f46;
+    --accent: #14b8a6;
+    --accent-light: #2dd4bf;
+}
+
+[data-color="purple"] {
+    --primary: #7c3aed;
+    --primary-light: #8b5cf6;
+    --primary-dark: #581c87;
+    --accent: #a78bfa;
+    --accent-light: #c4b5fd;
+}
+
+[data-color="rose"] {
+    --primary: #e11d48;
+    --primary-light: #fb7185;
+    --primary-dark: #9f1239;
+    --accent: #f43f5e;
+    --accent-light: #fb7185;
+}
+
+[data-color="amber"] {
+    --primary: #d97706;
+    --primary-light: #f59e0b;
+    --primary-dark: #92400e;
+    --accent: #f59e0b;
+    --accent-light: #fbbf24;
+}
+
+/* Hero gradient per color */
+[data-color="emerald"] .hero {
+    background: linear-gradient(135deg, #065f46 0%, #0f172a 50%, #0f766e 100%);
+}
+[data-color="purple"] .hero {
+    background: linear-gradient(135deg, #581c87 0%, #0f172a 50%, #4c1d95 100%);
+}
+[data-color="rose"] .hero {
+    background: linear-gradient(135deg, #9f1239 0%, #0f172a 50%, #881337 100%);
+}
+[data-color="amber"] .hero {
+    background: linear-gradient(135deg, #92400e 0%, #0f172a 50%, #78350f 100%);
+}
+
+/* CTA gradient per color */
+[data-color="emerald"] .cta-section {
+    background: linear-gradient(135deg, #065f46, #0f172a);
+}
+[data-color="purple"] .cta-section {
+    background: linear-gradient(135deg, #581c87, #0f172a);
+}
+[data-color="rose"] .cta-section {
+    background: linear-gradient(135deg, #9f1239, #0f172a);
+}
+[data-color="amber"] .cta-section {
+    background: linear-gradient(135deg, #92400e, #0f172a);
+}
+
+/* Program header gradient per color */
+[data-color="emerald"] .program-category-header {
+    background: linear-gradient(135deg, #065f46, #059669);
+}
+[data-color="purple"] .program-category-header {
+    background: linear-gradient(135deg, #581c87, #7c3aed);
+}
+[data-color="rose"] .program-category-header {
+    background: linear-gradient(135deg, #9f1239, #e11d48);
+}
+[data-color="amber"] .program-category-header {
+    background: linear-gradient(135deg, #92400e, #d97706);
+}
+
 /* ── Dark theme overrides for light sections ── */
 [data-theme="dark"] body {
     background: var(--bg);

@@ -294,4 +294,51 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('theme', next);
         });
     }
+
+    // ══════════════════════════════════════
+    // ── Color Palette Picker ──
+    // ══════════════════════════════════════
+    const colorToggle = document.getElementById('colorToggle');
+    const colorDropdown = document.getElementById('colorDropdown');
+    const savedColor = localStorage.getItem('color');
+
+    // Apply saved color
+    if (savedColor && savedColor !== 'default') {
+        document.documentElement.setAttribute('data-color', savedColor);
+    }
+
+    // Mark active swatch
+    function updateActiveColor(color) {
+        document.querySelectorAll('.color-swatch').forEach(sw => {
+            sw.classList.toggle('active', sw.getAttribute('data-color') === color);
+        });
+    }
+    updateActiveColor(savedColor || 'default');
+
+    if (colorToggle && colorDropdown) {
+        colorToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            colorDropdown.classList.toggle('active');
+        });
+
+        document.querySelectorAll('.color-swatch').forEach(swatch => {
+            swatch.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const color = swatch.getAttribute('data-color');
+                if (color === 'default') {
+                    document.documentElement.removeAttribute('data-color');
+                } else {
+                    document.documentElement.setAttribute('data-color', color);
+                }
+                localStorage.setItem('color', color);
+                updateActiveColor(color);
+                colorDropdown.classList.remove('active');
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            colorDropdown.classList.remove('active');
+        });
+    }
 });
