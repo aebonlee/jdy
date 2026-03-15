@@ -208,9 +208,49 @@ D:\jdy\
 | `twitter:card` | summary_large_image |
 
 ### 추후 작업 예정
+- [x] ~~별도 OG 전용 이미지 제작~~ → Update 5에서 완료
 - [ ] DNS 설정 확인 (`jdy.dreamitbiz.com` → GitHub Pages)
 - [ ] 카카오 디버거 캐시 초기화 후 미리보기 확인
-- [ ] 별도 OG 전용 이미지(1200x630px) 제작 시 교체
+
+---
+
+## 2026-03-15 (Day 1 - Update 5) — OG 전용 이미지 생성 & 경력 한문 수정
+
+### 작업 내역
+
+#### 1. OG 전용 이미지 생성 (`og-image.png`)
+- Node.js `canvas` 패키지로 1200x630px OG 이미지 자동 생성
+- 디자인 요소:
+  - 다크 그라디언트 배경 (사이트 히어로와 동일 톤)
+  - 상단 뱃지: "직업학박사 · 미래직업 연구 · 커리어 컨설팅 전문가"
+  - 메인 타이틀: "직업미래연구소" + "정동엽 직업학박사"
+  - 설명: "미래사회와 직업세계 연구 | 커리어 경력설계 | 전직지원 | 창업·창직"
+  - 하단 4개 핵심 키워드 아이콘: 박사과정 수료 / IT 20년+ / Futures Master / 직업심리전문가
+  - 도메인 표시: jdy.dreamitbiz.com
+- `og:image` 메타 태그를 `og-image.png`로 변경 (1200x630)
+- `twitter:image`도 동일하게 변경
+
+#### 2. 경력사항 한문 수정
+- "직업미래연구소 소장": **現 → 前** 변경
+- "한국뉴욕주립대학교 Futures Master & Futures Coach": **現 → 前** 변경
+
+#### 3. .gitignore 추가
+- `node_modules/`, `package.json`, `package-lock.json`, `generate-og.js`, `.claude/` 제외
+
+### OG 태그 최종 상태
+
+| 태그 | 값 |
+|------|-----|
+| `og:url` | `https://jdy.dreamitbiz.com/` |
+| `og:title` | 직업미래연구소 \| 정동엽 직업학박사 |
+| `og:description` | 직업학박사 정동엽. 미래사회와 직업세계 연구... |
+| `og:type` | website |
+| `og:image` | `https://jdy.dreamitbiz.com/og-image.png` (1200x630) |
+| `og:site_name` | 직업미래연구소 |
+
+### 추후 작업 예정
+- [ ] 카카오 디버거 캐시 초기화 후 미리보기 확인
+- [ ] DNS 설정 확인 (`jdy.dreamitbiz.com` → GitHub Pages)
 
 ---
 *Updated on 2026-03-15*
