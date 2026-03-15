@@ -1185,18 +1185,19 @@ img {
     margin-top: 4px;
 }
 
-/* ── Career Timeline ── */
+/* ── Career Timeline (Center Zigzag) ── */
 .career-timeline {
-    max-width: 700px;
+    max-width: 900px;
     margin: 0 auto;
     position: relative;
-    padding-left: 32px;
+    padding: 0;
 }
 
 .career-timeline::before {
     content: '';
     position: absolute;
-    left: 8px;
+    left: 50%;
+    transform: translateX(-50%);
     top: 0;
     bottom: 0;
     width: 2px;
@@ -1205,20 +1206,40 @@ img {
 
 .career-item {
     position: relative;
-    margin-bottom: 28px;
-    padding-left: 24px;
+    width: 50%;
+    margin-bottom: 20px;
+    padding-left: 0;
+}
+
+/* Odd items → left side */
+.career-item:nth-child(odd) {
+    padding-right: 36px;
+}
+
+/* Even items → right side */
+.career-item:nth-child(even) {
+    margin-left: 50%;
+    padding-left: 36px;
 }
 
 .career-dot {
     position: absolute;
-    left: -28px;
-    top: 6px;
+    top: 22px;
     width: 14px;
     height: 14px;
     border-radius: 50%;
     background: var(--primary);
     border: 3px solid var(--bg);
     box-shadow: 0 0 0 3px var(--primary);
+}
+
+.career-item:nth-child(odd) .career-dot {
+    right: -8px;
+    left: auto;
+}
+
+.career-item:nth-child(even) .career-dot {
+    left: -8px;
 }
 
 .career-content {
@@ -1229,7 +1250,12 @@ img {
     transition: transform var(--transition), box-shadow var(--transition);
 }
 
-.career-content:hover {
+.career-item:nth-child(odd) .career-content:hover {
+    transform: translateX(-4px);
+    box-shadow: var(--shadow);
+}
+
+.career-item:nth-child(even) .career-content:hover {
     transform: translateX(4px);
     box-shadow: var(--shadow);
 }
@@ -1866,6 +1892,32 @@ img {
     .nav-links a {
         color: rgba(255, 255, 255, 0.85) !important;
         font-size: 1.05rem;
+    }
+
+    /* Career timeline → single column on mobile */
+    .career-timeline::before {
+        left: 8px;
+        transform: none;
+    }
+
+    .career-item,
+    .career-item:nth-child(odd),
+    .career-item:nth-child(even) {
+        width: 100%;
+        margin-left: 0;
+        padding-left: 32px;
+        padding-right: 0;
+    }
+
+    .career-item:nth-child(odd) .career-dot,
+    .career-item:nth-child(even) .career-dot {
+        left: 1px;
+        right: auto;
+    }
+
+    .career-item:nth-child(odd) .career-content:hover,
+    .career-item:nth-child(even) .career-content:hover {
+        transform: translateX(4px);
     }
 
     .features-grid {
