@@ -332,4 +332,24 @@ D:\jdy\
 - 해↔달 전환 시 `opacity` + `rotate` 트랜지션
 
 ---
+
+## 2026-03-15 (Day 1 - Update 9) — 파비콘 생성 & 적용
+
+### 작업 내역
+
+#### 1. 파비콘 이미지 생성 (Node.js canvas)
+| 파일 | 크기 | 디자인 |
+|------|------|--------|
+| `favicon-16.png` | 16x16 | 다크블루 원형 + "JF" 흰색 텍스트 |
+| `favicon-32.png` | 32x32 | 다크블루 원형 + 시안 링 + "JF" 흰색 텍스트 |
+| `apple-touch-icon.png` | 180x180 | 다크 그라디언트 라운드렉트 + "직업" / "미래" + "JOB FUTURE" |
+
+#### 2. index.html 메타 태그 추가
+```html
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+```
+
+---
 *Updated on 2026-03-15*
