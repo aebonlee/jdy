@@ -508,4 +508,38 @@ D:\jdy\
 - `prog.g4.*`, `prog.10~12.*` (외국인 프로젝트) 영어 번역 18개 키 추가
 
 ---
+
+## 2026-03-15 (Day 1 - Update 14) — About 섹션 리디자인 & 경력 타임라인 겹침 효과
+
+### 작업 내역
+
+#### 1. About 섹션 전면 리디자인
+- 기존 2열 글래스 카드 레이아웃에서 완전히 새로운 구조로 변경 (디자인 유사성 해소)
+- **새 레이아웃 구조**:
+
+| 영역 | 설명 |
+|------|------|
+| `.about-intro` | 가로형 인트로 카드 (좌: 프로필+통계, 우: 인용문+소개) |
+| `.about-cards` | 3열 자격 카드 그리드 (학력 / 자격&활동 / 저서) |
+
+- `.about-intro`: flex 레이아웃, 프로필 사진(180px)과 통계 카운터를 좌측에, 인용문과 소개글을 우측에 배치
+- `.about-cards`: 3개 카드에 FA 아이콘 헤더 (`fa-graduation-cap`, `fa-clipboard-list`, `fa-book`) + 체크마크 리스트
+- 다크 테마 전체 대응: `.about-intro`, `.about-quote`, `.about-card` 등 다크 모드 오버라이드 추가
+
+#### 2. About 섹션 모바일 반응형
+- 768px 이하: `.about-intro` → `flex-direction: column`, 프로필 150px
+- 768px 이하: `.about-cards` → 1열 그리드
+
+#### 3. 경력 타임라인 — 1/2 겹침 효과
+- 지그재그 레이아웃에서 인접 항목을 약 50px 겹쳐 세로 영역 축소
+- `.career-item:not(:first-child) { margin-top: -50px; }`
+- 좌/우 항목이 서로 다른 면에 위치하므로 시각적으로 깔끔한 겹침
+- 모바일 (768px 이하): 겹침 해제, `margin-bottom: 16px`으로 복원
+
+#### 4. i18n 번역 추가
+- `about.card1.title`: 'Education'
+- `about.card2.title`: 'Certifications & Activities'
+- `about.card3.title`: 'Publications'
+
+---
 *Updated on 2026-03-15*
