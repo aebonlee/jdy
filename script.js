@@ -343,19 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ══════════════════════════════════════
-    // ── Scroll Progress Bar ──
-    // ══════════════════════════════════════
-    const scrollProgress = document.getElementById('scrollProgress');
-    function updateScrollProgress() {
-        const scrollTop = window.scrollY;
-        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-        if (docHeight > 0 && scrollProgress) {
-            scrollProgress.style.width = (scrollTop / docHeight) * 100 + '%';
-        }
-    }
-    window.addEventListener('scroll', updateScrollProgress);
-
-    // ══════════════════════════════════════
     // ── Back to Top Button ──
     // ══════════════════════════════════════
     const backToTop = document.getElementById('backToTop');

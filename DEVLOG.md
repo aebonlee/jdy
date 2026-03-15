@@ -440,4 +440,38 @@ D:\jdy\
 - `.cert-icon`, `.program-icon` 다크 모드에서 accent 컬러로 전환
 
 ---
+
+## 2026-03-15 (Day 1 - Update 12) — 스크롤 바 제거 & 배경 오브 애니메이션 적용
+
+### 작업 내역
+
+#### 1. 스크롤 진행 바 제거
+- 상단 3px 프로그레스 라인 삭제 (HTML, CSS, JS 모두 제거)
+- 지저분한 시각 요소 제거로 깔끔한 상단 유지
+
+#### 2. 히어로 배경 — 부유 오브 (Floating Orbs)
+- 3개의 그라디언트 오브(`.hero-orb`)가 천천히 떠다니는 CSS 애니메이션 적용
+- `filter: blur(80px)` + `opacity: 0.12`로 은은한 빛 효과
+- 각 오브 별도 keyframe (`orbFloat1/2/3`) — 서로 다른 속도·방향으로 움직임
+
+| 오브 | 크기 | 색상 | 애니메이션 |
+|------|------|------|------------|
+| orb-1 | 500px | accent | 20s |
+| orb-2 | 350px | primary-light | 25s |
+| orb-3 | 250px | accent-light | 18s |
+
+#### 3. 라이트 섹션 배경 효과
+- About 섹션: 우상단 원형 그라디언트 오브 부유 (`sectionOrb` 20s)
+- Programs 섹션: 좌하단 원형 그라디언트 오브 부유 (`sectionOrb` 25s reverse)
+
+#### 4. 다크 섹션 배경 효과
+- 특장점·강의이력: 중앙 시안 빛 오브 부유 (`darkOrb` 22s)
+- CTA 섹션: 우상단 시안 빛 오브 부유 (`orbFloat1` 18s)
+
+#### 5. 네비 토글 버튼 간격 조정
+- `.nav-toggles`에 `flex-direction: row`, `flex-wrap: nowrap`, `flex-shrink: 0` 명시
+- `.nav-links` gap: 32px → 20px
+- 3개 버튼이 반드시 1줄로 나열되도록 강제
+
+---
 *Updated on 2026-03-15*
