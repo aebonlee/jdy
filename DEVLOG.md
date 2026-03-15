@@ -285,4 +285,26 @@ D:\jdy\
 - `.navbar.scrolled .lang-toggle` 스크롤 시 스타일
 
 ---
+
+## 2026-03-15 (Day 1 - Update 7) — 카카오톡 오픈채팅 & QR코드 추가 / 상담신청 밑줄 제거
+
+### 작업 내역
+
+#### 1. 카카오톡 오픈채팅 연결
+- CTA 섹션에 카카오톡 상담 버튼 추가 (메인 CTA)
+  - 링크: `https://open.kakao.com/o/stBEgxli`
+- 기존 이메일/전화 버튼을 보조 버튼으로 변경
+
+#### 2. QR코드 추가
+- GitHub에 업로드된 `jdy_qr.png` 활용
+- CTA 섹션 하단에 QR코드 블록 추가
+- 스캔 시 카카오톡 오픈채팅으로 바로 연결
+- 호버 시 "클릭하여 이동" 오버레이 표시
+- 영어 번역 키 추가: `cta.kakao`, `cta.qr.caption`, `cta.qr.click`
+
+#### 3. 상담신청 버튼 밑줄 효과 제거
+- `.nav-links a::after` → `.nav-links a:not(.btn)::after`로 변경
+- `.btn-outline-small` 클래스의 상담신청 버튼에서 호버 밑줄 비활성화
+
+---
 *Updated on 2026-03-15*
