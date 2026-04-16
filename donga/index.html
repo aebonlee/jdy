@@ -963,15 +963,6 @@ async function saveProfile() {
     return;
   }
 
-  const { error: eErr } = await jdy_enrollInSection(section);
-  // 23505 = unique violation (이미 수강중) → 무시
-  if (eErr && eErr.code !== '23505') {
-    jdy_loading(false);
-    console.error('[saveProfile] 수강신청 실패:', eErr);
-    jdy_toast('error', '수강신청 실패: ' + (eErr.message || String(eErr)));
-    return;
-  }
-
   _profile = await jdy_getProfile(_session.user.id);
   jdy_loading(false);
 
