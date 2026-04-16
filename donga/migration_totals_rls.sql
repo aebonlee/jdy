@@ -18,17 +18,19 @@ USING (
 
 -- ② jdy_profiles: 인증된 사용자 전체 허용 (분반 멤버 목록용)
 --
--- ⚠️  주의: 아래처럼 jdy_profiles 안에서 jdy_profiles를 다시 조회하면
---           RLS 정책 무한재귀가 발생합니다 (infinite recursion in policy).
+-- ⚠️  RLS 무한재귀 주의: jdy_profiles 정책 안에서 jdy_profiles를 다시 SELECT하면 안 됩니다.
 --
---   BAD:  section = (SELECT section FROM public.jdy_profiles WHERE id = auth.uid())
+--   BAD (재귀):  EXISTS (SELECT 1 FROM jdy_profiles WHERE id = auth.uid() AND role = 'instructor')
+--   BAD (재귀):  section = (SELECT section FROM jdy_profiles WHERE id = auth.uid())
 --
---   → 단순하게 auth.role() = 'authenticated' 로 허용하면 재귀 없이 동작합니다.
---     (학생이 동료 이름/학번을 볼 수 있어야 하므로 이 정책이 맞습니다)
+--   GOOD: auth.role() = 'authenticated'  ← 재귀 없이 동작
 
+-- 재귀 유발 정책 제거 (기존에 있던 버그 포함)
 DROP POLICY IF EXISTS "section members can view each other" ON public.jdy_profiles;
-DROP POLICY IF EXISTS "authenticated users can read profiles" ON public.jdy_profiles;
+DROP POLICY IF EXISTS "jdy_p_instructor_select" ON public.jdy_profiles;
 
+-- 단순 정책으로 교체
+DROP POLICY IF EXISTS "authenticated users can read profiles" ON public.jdy_profiles;
 CREATE POLICY "authenticated users can read profiles"
 ON public.jdy_profiles
 FOR SELECT
