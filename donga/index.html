@@ -427,56 +427,73 @@ const CRITERIA = [
 ];
 
 // ── 초기화 ──────────────────────────────────────────────────
+// getSession() 직접 호출 → onAuthStateChange 이벤트 구독 오버헤드 없이 즉시 실행
 (async () => {
   jdy_loading(true);
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    await _handleSession(session);
+  } catch (err) {
+    console.error('[donga/index] 초기화 오류:', err);
+    jdy_toast('error', '초기화 중 오류가 발생했습니다.');
+  } finally {
+    jdy_loading(false);
+  }
 
+  // OAuth redirect 후 SIGNED_IN / 로그아웃 SIGNED_OUT 처리
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'TOKEN_REFRESHED') return;
-    if (_initialized) return;
-    _initialized = true;
-
-    try {
-      if (!session) {
-        showView('guest');
-        jdy_toggleNavAuth(false);
-        return;
+    if (event === 'SIGNED_IN' && !_session) {
+      // OAuth 콜백 (첫 번째 방문 시 getSession이 빈 경우)
+      try {
+        jdy_loading(true);
+        await _handleSession(session);
+      } catch (err) {
+        console.error('[donga/index] auth change 오류:', err);
+      } finally {
+        jdy_loading(false);
       }
-
-      _session = session;
-      _profile = await jdy_getProfile(session.user.id);
-
-      // 첫 OAuth 로그인 → 프로필 자동 생성
-      if (!_profile) {
-        await jdy_upsertProfile({ full_name: jdy_fallbackName(session) });
-        _profile = await jdy_getProfile(session.user.id);
-      }
-
-      jdy_toggleNavAuth(true, _profile);
-
-      // 프로필 미완성 → 모달 즉시 표시
-      if (!_profile?.full_name || !_profile?.student_id || !_profile?.section) {
-        showView('eval');
-        document.getElementById('profile-modal').style.display = 'flex';
-        return;
-      }
-
-      // 교수자 → 대시보드 이동
-      if (_profile.role === 'instructor') {
-        location.href = 'dashboard.html';
-        return;
-      }
-
-      // 학생 → 평가 뷰 초기화
-      await initEvalView();
-
-    } catch (err) {
-      console.error('[donga/index] 초기화 오류:', err);
-      jdy_toast('error', '초기화 중 오류가 발생했습니다.');
-    } finally {
-      jdy_loading(false);
+    } else if (event === 'SIGNED_OUT') {
+      _session = null; _profile = null;
+      showView('guest');
+      jdy_toggleNavAuth(false);
     }
   });
 })();
+
+async function _handleSession(session) {
+  if (!session) {
+    showView('guest');
+    jdy_toggleNavAuth(false);
+    return;
+  }
+
+  _session = session;
+  _profile = await jdy_getProfile(session.user.id);
+
+  // 첫 OAuth 로그인 → 프로필 자동 생성
+  if (!_profile) {
+    await jdy_upsertProfile({ full_name: jdy_fallbackName(session) });
+    _profile = await jdy_getProfile(session.user.id);
+  }
+
+  jdy_toggleNavAuth(true, _profile);
+
+  // 프로필 미완성 → 모달 즉시 표시
+  if (!_profile?.full_name || !_profile?.student_id || !_profile?.section) {
+    showView('eval');
+    document.getElementById('profile-modal').style.display = 'flex';
+    return;
+  }
+
+  // 교수자 → 대시보드 이동
+  if (_profile.role === 'instructor') {
+    location.href = 'dashboard.html';
+    return;
+  }
+
+  // 학생 → 평가 뷰 초기화
+  await initEvalView();
+}
 
 // ── 뷰 전환 ─────────────────────────────────────────────────
 function showView(which) {
@@ -484,54 +501,58 @@ function showView(which) {
   document.getElementById('view-eval').style.display  = which === 'eval'  ? 'block' : 'none';
 }
 
-// ── 평가 뷰 초기화 (병렬 로드) ──────────────────────────────
+// ── 평가 뷰 초기화 (최적화된 병렬 로드) ────────────────────
+// DB 왕복 순서:
+//   ① getProfile (이미 완료)
+//   ② coursePromise + membersPromise 동시 시작
+//   ③ coursePromise 완료 즉시 evalsPromise 시작 (membersPromise와 겹침)
+//   ④ Promise.all([membersPromise, evalsPromise]) 대기 → 렌더
+// 결과: 기존 3단계(course+members → evals) 대신 2단계로 단축
 async function initEvalView() {
   showView('eval');
 
   const userId  = _session.user.id;
   const section = _profile.section;
 
-  // 헤더 섹션 배지 즉시 표시
   updateHeader(null, section);
 
-  jdy_loading(true);
+  // ② 강의 + 분반 멤버 동시 시작
+  const coursePromise   = jdy_getActiveCourseBySection(section);
+  const membersPromise  = jdy_getSectionMembers(section, userId);
 
-  // 병렬: 강의 + 분반 멤버 동시 조회
-  const [course, members] = await Promise.all([
-    jdy_getActiveCourseBySection(section),
-    jdy_getSectionMembers(section, userId)
-  ]);
+  // ③ 강의 ID 확보 즉시 평가도 시작 (membersPromise는 계속 실행 중)
+  _course = await coursePromise;
 
-  _course  = course;
-  _members = members;
-
-  if (!course) {
+  if (!_course) {
+    _members = await membersPromise;
     document.getElementById('eval-tbody').innerHTML =
       `<tr><td colspan="10" style="text-align:center;padding:48px;color:var(--text3);">
         <div class="jdy-empty-icon">📭</div>
         <p>활성 강의를 찾을 수 없습니다.<br>교수자에게 문의하세요.</p>
       </td></tr>`;
     updateHeader(null, section);
-    jdy_loading(false);
     return;
   }
 
-  updateHeader(course, section);
+  updateHeader(_course, section);
 
-  // 내 기존 평가 조회
-  const evals = await jdy_getMyEvals(course.id, userId);
+  // ③ getMyEvals 즉시 시작 — membersPromise와 겹쳐서 실행
+  const evalsPromise = jdy_getMyEvals(_course.id, userId);
+
+  // ④ 멤버 + 평가 동시 대기
+  const [members, evals] = await Promise.all([membersPromise, evalsPromise]);
+
+  _members = members;
   _myEvals = {};
   evals.forEach(e => { _myEvals[e.evaluatee_id] = e; });
 
   // localStorage 초안 로드
-  const draftKey = `jdy_eval_${userId}_${course.id}`;
+  const draftKey = `jdy_eval_${userId}_${_course.id}`;
   let draft = {};
   try {
     const raw = localStorage.getItem(draftKey);
     if (raw) draft = JSON.parse(raw);
   } catch (_) {}
-
-  jdy_loading(false);
 
   renderEvalTable(draft);
   updateProgress();
