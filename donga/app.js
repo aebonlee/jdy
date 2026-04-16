@@ -35,6 +35,13 @@ async function jdy_signOut() {
   location.href = _basePath() + 'index.html';
 }
 
+/** OAuth 메타데이터에서 표시 이름을 추출. email이 null인 소셜 계정 대비 */
+function jdy_fallbackName(session) {
+  const meta  = session.user.user_metadata || {};
+  const email = session.user.email || '';
+  return meta.full_name || meta.name || (email ? email.split('@')[0] : '');
+}
+
 function _redirectTo() {
   // 현재 페이지(donga/) 기준으로 콜백 URL 결정
   const base = location.origin + _basePath();

@@ -247,16 +247,18 @@
 
 let _session = null;
 let _profile = null;
+let _initialized = false;
 
 // ── 초기화 ────────────────────────────────────────────────
-// onAuthStateChange의 INITIAL_SESSION 이벤트가 OAuth 리다이렉트 토큰 처리까지
-// 완료된 후 발화하므로, getSession() 대신 이 패턴을 사용합니다.
+// _initialized 가드: INITIAL_SESSION + SIGNED_IN이 중복 발화해도 1회만 실행
 (async () => {
   jdy_loading(true);
 
   sb.auth.onAuthStateChange(async (event, session) => {
-    // 토큰 갱신은 UI 재렌더 불필요
     if (event === 'TOKEN_REFRESHED') return;
+    if (_initialized) return;
+    _initialized = true;
+
     try {
       _session = session;
 
@@ -265,14 +267,12 @@ let _profile = null;
 
         // 첫 OAuth 로그인 시 트리거가 아직 완료 안 됐을 수 있으므로 직접 생성
         if (!_profile) {
-          const meta = session.user.user_metadata || {};
-          await jdy_upsertProfile({
-            full_name: meta.full_name || meta.name || session.user.email.split('@')[0]
-          });
+          await jdy_upsertProfile({ full_name: jdy_fallbackName(session) });
           _profile = await jdy_getProfile(session.user.id);
         }
 
-        if (_profile && !_profile.full_name) {
+        // 필수 정보(이름·학번·분반) 미완성 시 프로필 모달 표시
+        if (!_profile || !_profile.full_name || !_profile.student_id || !_profile.section) {
           document.getElementById('profile-modal').style.display = 'flex';
         }
       } else {
@@ -361,7 +361,8 @@ function renderAuthSection() {
   const instructor = document.getElementById('auth-instructor');
   const navDash    = document.getElementById('nav-dash');
 
-  if (!_session || !_profile) {
+  // 세션 없을 때만 게스트 화면 (프로필 null이어도 로그인 상태면 프로필 모달이 뜸)
+  if (!_session) {
     guest.style.display      = 'block';
     student.style.display    = 'none';
     instructor.style.display = 'none';

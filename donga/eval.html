@@ -47,7 +47,7 @@
       <a href="eval.html" class="jdy-nav-sec-link jdy-sec-Y2">Y2반</a>
     </div>
     <!-- 로그인 상태 -->
-    <div id="nav-user" class="jdy-nav-user">
+    <div id="nav-user" class="jdy-nav-user" style="display:none">
       <div class="jdy-avatar" id="nav-avatar">?</div>
       <span id="nav-name" style="font-size:.875rem;color:var(--text2)"></span>
       <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signOut()">로그아웃</button>
@@ -221,6 +221,7 @@
 
 let _session = null;
 let _profile = null;
+let _initialized = false;
 let _courses  = [];
 let _activeCourseId  = null;
 let _classmates      = [];
@@ -237,55 +238,63 @@ const CRITERIA = [
 ];
 
 // ── 초기화 ────────────────────────────────────────────────
+// _initialized 가드: 이중 발화(INITIAL_SESSION + SIGNED_IN) 방지
+// try/catch/finally: 오류 시에도 jdy_loading(false) 보장
 (async () => {
   jdy_loading(true);
 
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'TOKEN_REFRESHED') return;
+    if (_initialized) return;
+    _initialized = true;
 
-    if (!session) {
-      location.href = 'index.html';
-      return;
-    }
+    try {
+      if (!session) {
+        location.href = 'index.html';
+        return;
+      }
 
-    _session = session;
-    _profile = await jdy_getProfile(session.user.id);
-
-    if (!_profile) {
-      const meta = session.user.user_metadata || {};
-      await jdy_upsertProfile({
-        full_name: meta.full_name || meta.name || session.user.email.split('@')[0]
-      });
+      _session = session;
       _profile = await jdy_getProfile(session.user.id);
+
+      if (!_profile) {
+        await jdy_upsertProfile({ full_name: jdy_fallbackName(session) });
+        _profile = await jdy_getProfile(session.user.id);
+      }
+
+      // 필수 정보 미완성 → index.html에서 프로필 모달이 뜸
+      if (!_profile?.full_name || !_profile?.student_id || !_profile?.section) {
+        location.href = 'index.html';
+        return;
+      }
+
+      jdy_toggleNavAuth(true, _profile);
+
+      // 수강 강의 로드
+      const enrollments = await jdy_getMyEnrollments(_session.user.id);
+      _courses = enrollments.map(e => e.course).filter(Boolean);
+
+      jdy_loading(false);
+
+      if (!_courses.length) {
+        document.getElementById('classmates-area').innerHTML = `
+          <div class="jdy-empty">
+            <div class="jdy-empty-icon">📭</div>
+            <p>수강 중인 강의가 없습니다.<br><a href="index.html" style="color:var(--primary)">강의 홈</a>에서 수강신청 후 이용해주세요.</p>
+          </div>`;
+        document.getElementById('course-tabs').innerHTML = '';
+        document.getElementById('progress-box').style.display = 'none';
+        return;
+      }
+
+      buildCourseTabs();
+      await selectCourse(_courses[0].id);
+    } catch (err) {
+      console.error('[donga/eval] 초기화 오류:', err);
+      jdy_toast('error', '초기화 중 오류가 발생했습니다.');
+    } finally {
+      jdy_loading(false); // 에러 포함 모든 경우에서 스피너 반드시 숨김
     }
-
-    if (!_profile?.full_name) {
-      alert('프로필을 먼저 완성해주세요.');
-      location.href = 'index.html';
-      return;
-    }
-
-    jdy_toggleNavAuth(true, _profile);
-
-    // 수강 강의 로드
-    const enrollments = await jdy_getMyEnrollments(_session.user.id);
-    _courses = enrollments.map(e => e.course).filter(Boolean);
-
-    jdy_loading(false);
-
-    if (!_courses.length) {
-      document.getElementById('classmates-area').innerHTML = `
-        <div class="jdy-empty">
-          <div class="jdy-empty-icon">📭</div>
-          <p>수강 중인 강의가 없습니다.<br><a href="index.html" style="color:var(--primary)">강의 홈</a>에서 수강신청 후 이용해주세요.</p>
-        </div>`;
-      document.getElementById('course-tabs').innerHTML = '';
-      document.getElementById('progress-box').style.display = 'none';
-      return;
-    }
-
-    buildCourseTabs();
-    await selectCourse(_courses[0].id);
   }); // onAuthStateChange
 })();
 
