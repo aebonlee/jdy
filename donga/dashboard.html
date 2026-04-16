@@ -286,34 +286,47 @@ const CRITERIA = [
 // ── 초기화 ────────────────────────────────────────────────
 (async () => {
   jdy_loading(true);
-  _session = await jdy_getSession();
 
-  if (!_session) { location.href = 'index.html'; return; }
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'TOKEN_REFRESHED') return;
 
-  _profile = await jdy_getProfile(_session.user.id);
-  if (_profile?.role !== 'instructor') {
-    alert('교수자 계정만 접근할 수 있습니다.');
-    location.href = 'index.html';
-    return;
-  }
+    if (!session) { location.href = 'index.html'; return; }
 
-  jdy_toggleNavAuth(true, _profile);
+    _session = session;
+    _profile = await jdy_getProfile(session.user.id);
 
-  // 교수자 강의 로드
-  const allCourses = await jdy_getCourses(false);
-  _courses = allCourses.filter(c => c.instructor_id === _session.user.id);
+    if (!_profile) {
+      const meta = session.user.user_metadata || {};
+      await jdy_upsertProfile({
+        full_name: meta.full_name || meta.name || session.user.email.split('@')[0]
+      });
+      _profile = await jdy_getProfile(session.user.id);
+    }
 
-  jdy_loading(false);
+    if (_profile?.role !== 'instructor') {
+      alert('교수자 계정만 접근할 수 있습니다.');
+      location.href = 'index.html';
+      return;
+    }
 
-  if (!_courses.length) {
-    document.getElementById('course-tabs').innerHTML = '';
-    document.getElementById('students-tbody').innerHTML =
-      '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">등록된 강의가 없습니다.</td></tr>';
-    return;
-  }
+    jdy_toggleNavAuth(true, _profile);
 
-  buildTabs();
-  await loadCourseData(_courses[0].id);
+    // 교수자 강의 로드
+    const allCourses = await jdy_getCourses(false);
+    _courses = allCourses.filter(c => c.instructor_id === _session.user.id);
+
+    jdy_loading(false);
+
+    if (!_courses.length) {
+      document.getElementById('course-tabs').innerHTML = '';
+      document.getElementById('students-tbody').innerHTML =
+        '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">등록된 강의가 없습니다.</td></tr>';
+      return;
+    }
+
+    buildTabs();
+    await loadCourseData(_courses[0].id);
+  }); // onAuthStateChange
 })();
 
 // ── 탭 ───────────────────────────────────────────────────

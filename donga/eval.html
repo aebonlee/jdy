@@ -238,42 +238,54 @@ const CRITERIA = [
 // ── 초기화 ────────────────────────────────────────────────
 (async () => {
   jdy_loading(true);
-  _session = await jdy_getSession();
 
-  if (!_session) {
-    location.href = 'index.html';
-    return;
-  }
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'TOKEN_REFRESHED') return;
 
-  _profile = await jdy_getProfile(_session.user.id);
-  if (!_profile?.full_name) {
-    alert('프로필을 먼저 완성해주세요.');
-    location.href = 'index.html';
-    return;
-  }
+    if (!session) {
+      location.href = 'index.html';
+      return;
+    }
 
-  // 네비 사용자 표시
-  jdy_toggleNavAuth(true, _profile);
+    _session = session;
+    _profile = await jdy_getProfile(session.user.id);
 
-  // 수강 강의 로드
-  const enrollments = await jdy_getMyEnrollments(_session.user.id);
-  _courses = enrollments.map(e => e.course).filter(Boolean);
+    if (!_profile) {
+      const meta = session.user.user_metadata || {};
+      await jdy_upsertProfile({
+        full_name: meta.full_name || meta.name || session.user.email.split('@')[0]
+      });
+      _profile = await jdy_getProfile(session.user.id);
+    }
 
-  jdy_loading(false);
+    if (!_profile?.full_name) {
+      alert('프로필을 먼저 완성해주세요.');
+      location.href = 'index.html';
+      return;
+    }
 
-  if (!_courses.length) {
-    document.getElementById('classmates-area').innerHTML = `
-      <div class="jdy-empty">
-        <div class="jdy-empty-icon">📭</div>
-        <p>수강 중인 강의가 없습니다.<br><a href="index.html" style="color:var(--primary)">강의 홈</a>에서 수강신청 후 이용해주세요.</p>
-      </div>`;
-    document.getElementById('course-tabs').innerHTML = '';
-    document.getElementById('progress-box').style.display = 'none';
-    return;
-  }
+    jdy_toggleNavAuth(true, _profile);
 
-  buildCourseTabs();
-  await selectCourse(_courses[0].id);
+    // 수강 강의 로드
+    const enrollments = await jdy_getMyEnrollments(_session.user.id);
+    _courses = enrollments.map(e => e.course).filter(Boolean);
+
+    jdy_loading(false);
+
+    if (!_courses.length) {
+      document.getElementById('classmates-area').innerHTML = `
+        <div class="jdy-empty">
+          <div class="jdy-empty-icon">📭</div>
+          <p>수강 중인 강의가 없습니다.<br><a href="index.html" style="color:var(--primary)">강의 홈</a>에서 수강신청 후 이용해주세요.</p>
+        </div>`;
+      document.getElementById('course-tabs').innerHTML = '';
+      document.getElementById('progress-box').style.display = 'none';
+      return;
+    }
+
+    buildCourseTabs();
+    await selectCourse(_courses[0].id);
+  }); // onAuthStateChange
 })();
 
 // ── 강의 탭 생성 ──────────────────────────────────────────
