@@ -227,37 +227,39 @@ let _session = null;
 let _profile = null;
 
 // ── 초기화 ────────────────────────────────────────────────
+// onAuthStateChange의 INITIAL_SESSION 이벤트가 OAuth 리다이렉트 토큰 처리까지
+// 완료된 후 발화하므로, getSession() 대신 이 패턴을 사용합니다.
 (async () => {
   jdy_loading(true);
-  try {
-    _session = await jdy_getSession();
-    if (_session) {
-      _profile = await jdy_getProfile(_session.user.id);
-      // 프로필 미완성 시 프로필 모달 표시
-      if (_profile && !_profile.full_name) {
-        document.getElementById('profile-modal').style.display = 'flex';
-      }
-    }
-  } finally {
-    jdy_loading(false);
-  }
 
-  await loadCourses();
-  renderAuthSection();
-
-  // 인증 상태 변경 감지
   sb.auth.onAuthStateChange(async (event, session) => {
+    // 토큰 갱신은 UI 재렌더 불필요
+    if (event === 'TOKEN_REFRESHED') return;
+
     _session = session;
+
     if (session) {
       _profile = await jdy_getProfile(session.user.id);
+
+      // 첫 OAuth 로그인 시 트리거가 아직 완료 안 됐을 수 있으므로 직접 생성
+      if (!_profile) {
+        const meta = session.user.user_metadata || {};
+        await jdy_upsertProfile({
+          full_name: meta.full_name || meta.name || session.user.email.split('@')[0]
+        });
+        _profile = await jdy_getProfile(session.user.id);
+      }
+
       if (_profile && !_profile.full_name) {
         document.getElementById('profile-modal').style.display = 'flex';
       }
     } else {
       _profile = null;
     }
+
     await loadCourses();
     renderAuthSection();
+    jdy_loading(false);
   });
 })();
 
