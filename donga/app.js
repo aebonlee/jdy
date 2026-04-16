@@ -397,6 +397,49 @@ async function jdy_getMultiCoursePitchEvals(courseIds) {
 }
 
 // ============================================================
+// 분반 기반 헬퍼 함수 (index.html 단일 페이지용)
+// ============================================================
+
+/** 분반 코드로 활성 강의 1건 조회 */
+async function jdy_getActiveCourseBySection(section) {
+  const { data, error } = await sb
+    .from('jdy_courses')
+    .select('id,name,section,semester,year,description')
+    .eq('section', section)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error) { console.error('getActiveCourseBySection:', error); return null; }
+  return data;
+}
+
+/** 분반 전체 멤버 조회 (jdy_profiles 직접, 수강신청 불필요)
+ *  @param {string} section - 'Q1' | 'Q2' | 'Y2'
+ *  @param {string|null} excludeId - 제외할 user id (보통 본인)
+ */
+async function jdy_getSectionMembers(section, excludeId = null) {
+  let q = sb
+    .from('jdy_profiles')
+    .select('id,full_name,student_id')
+    .eq('section', section)
+    .or('role.neq.instructor,role.is.null')
+    .order('student_id');
+  if (excludeId) q = q.neq('id', excludeId);
+  const { data, error } = await q;
+  if (error) { console.error('getSectionMembers:', error); return []; }
+  return data || [];
+}
+
+/** 분반 전체 평가 집계용 조회 (evaluatee_id + 5개 점수만, 평가자 익명) */
+async function jdy_getSectionAllEvals(courseId) {
+  const { data, error } = await sb
+    .from('jdy_peer_evaluations')
+    .select('evaluatee_id,score_participation,score_responsibility,score_cooperation,score_communication,score_contribution')
+    .eq('course_id', courseId);
+  if (error) { console.error('getSectionAllEvals:', error); return []; }
+  return data || [];
+}
+
+// ============================================================
 // UI Utilities
 // ============================================================
 
