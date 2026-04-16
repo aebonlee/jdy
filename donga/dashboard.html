@@ -65,7 +65,17 @@
       <a href="index.html"    class="jdy-nav-link">강의 홈</a>
       <a href="dashboard.html" class="jdy-nav-link active">대시보드</a>
     </div>
-    <div class="jdy-nav-user">
+    <!-- 비로그인 상태 -->
+    <div id="nav-guest" class="jdy-nav-user" style="gap:8px;display:none;">
+      <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_openAuthModal('login')">
+        <i class="fa-solid fa-right-to-bracket"></i> 로그인
+      </button>
+      <button class="jdy-btn jdy-btn-primary jdy-btn-sm" onclick="jdy_openAuthModal('signup')">
+        <i class="fa-solid fa-user-plus"></i> 회원가입
+      </button>
+    </div>
+    <!-- 로그인 상태 -->
+    <div id="nav-user" class="jdy-nav-user">
       <div class="jdy-avatar" id="nav-avatar">?</div>
       <span class="jdy-role-badge instructor">교수자</span>
       <span id="nav-name" style="font-size:.875rem;color:var(--text2)"></span>
@@ -203,8 +213,7 @@ const CRITERIA = [
     return;
   }
 
-  document.getElementById('nav-avatar').textContent = (_profile.full_name || '?').charAt(0).toUpperCase();
-  document.getElementById('nav-name').textContent   = _profile.full_name || '';
+  jdy_toggleNavAuth(true, _profile);
 
   // 교수자 강의 로드
   const allCourses = await jdy_getCourses(false);

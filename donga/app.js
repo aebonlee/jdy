@@ -178,6 +178,85 @@ async function jdy_getAllEvalsForCourse(courseId) {
 }
 
 // ============================================================
+// 네비바 Auth 상태 토글 (공통)
+// ============================================================
+
+/**
+ * 네비바의 nav-guest / nav-user 영역 표시/숨김
+ * @param {boolean} isLoggedIn
+ * @param {object|null} profile
+ */
+function jdy_toggleNavAuth(isLoggedIn, profile = null) {
+  const guestEl = document.getElementById('nav-guest');
+  const userEl  = document.getElementById('nav-user');
+  if (guestEl) guestEl.style.display = isLoggedIn ? 'none' : 'flex';
+  if (userEl)  userEl.style.display  = isLoggedIn ? 'flex'  : 'none';
+
+  if (isLoggedIn && profile) {
+    const avatarEl = document.getElementById('nav-avatar');
+    const nameEl   = document.getElementById('nav-name');
+    if (avatarEl) avatarEl.textContent = (profile.full_name || '?').charAt(0).toUpperCase();
+    if (nameEl)   nameEl.textContent   = profile.full_name || '';
+  }
+}
+
+// ============================================================
+// 로그인 / 회원가입 공용 모달
+// ============================================================
+
+/**
+ * 네비바 로그인·회원가입 버튼에서 호출하는 공용 OAuth 모달
+ * @param {'login'|'signup'} mode
+ */
+function jdy_openAuthModal(mode = 'login') {
+  const existing = document.getElementById('jdy-auth-popup');
+  if (existing) { existing.remove(); return; }
+
+  const isLogin = mode === 'login';
+  const title   = isLogin ? '로그인' : '회원가입';
+  const desc    = isLogin
+    ? '소셜 계정으로 간편하게 로그인하세요.'
+    : '계정을 만들고 동료평가에 참여하세요.<br>가입과 동시에 바로 이용 가능합니다.';
+
+  const overlay = document.createElement('div');
+  overlay.id        = 'jdy-auth-popup';
+  overlay.className = 'jdy-modal-bg';
+  overlay.innerHTML = `
+    <div class="jdy-modal" style="max-width:380px;">
+      <div class="jdy-modal-header">
+        <span class="jdy-modal-title">${title}</span>
+        <button class="jdy-modal-close" onclick="document.getElementById('jdy-auth-popup').remove()">✕</button>
+      </div>
+      <div class="jdy-modal-body" style="padding-bottom:28px;text-align:center;">
+        <p style="font-size:.875rem;color:var(--text2);margin-bottom:24px;line-height:1.6">${desc}</p>
+
+        <button class="jdy-btn jdy-btn-google jdy-btn-full" onclick="jdy_signInGoogle()">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+               alt="Google" style="width:20px;height:20px;">
+          Google로 계속하기
+        </button>
+
+        <div class="jdy-auth-divider">또는</div>
+
+        <button class="jdy-btn jdy-btn-kakao jdy-btn-full" onclick="jdy_signInKakao()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919" style="flex-shrink:0">
+            <path d="M12 3C6.48 3 2 6.69 2 11.25c0 2.89 1.74 5.42 4.36 6.96l-1.11 4.09 4.73-3.12c.63.09 1.28.14 1.95.14 5.52 0 10-3.69 10-8.24C21.93 6.69 17.52 3 12 3z"/>
+          </svg>
+          카카오로 계속하기
+        </button>
+
+        <p style="font-size:.75rem;color:var(--text3);margin-top:20px;line-height:1.5;">
+          로그인과 회원가입은 동일한 절차입니다.<br>
+          처음 이용 시 자동으로 계정이 생성됩니다.
+        </p>
+      </div>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ============================================================
 // UI Utilities
 // ============================================================
 

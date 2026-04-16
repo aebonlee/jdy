@@ -24,6 +24,16 @@
       <a href="eval.html"  class="jdy-nav-link" id="nav-eval">동료평가</a>
       <a href="dashboard.html" class="jdy-nav-link" id="nav-dash" style="display:none">대시보드</a>
     </div>
+    <!-- 비로그인 상태 -->
+    <div id="nav-guest" class="jdy-nav-user" style="gap:8px;">
+      <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_openAuthModal('login')">
+        <i class="fa-solid fa-right-to-bracket"></i> 로그인
+      </button>
+      <button class="jdy-btn jdy-btn-primary jdy-btn-sm" onclick="jdy_openAuthModal('signup')">
+        <i class="fa-solid fa-user-plus"></i> 회원가입
+      </button>
+    </div>
+    <!-- 로그인 상태 -->
     <div id="nav-user" class="jdy-nav-user" style="display:none">
       <div class="jdy-avatar" id="nav-avatar">?</div>
       <span id="nav-name"></span>
@@ -315,22 +325,19 @@ function renderAuthSection() {
   const guest      = document.getElementById('auth-guest');
   const student    = document.getElementById('auth-student');
   const instructor = document.getElementById('auth-instructor');
-  const navUser    = document.getElementById('nav-user');
   const navDash    = document.getElementById('nav-dash');
 
   if (!_session || !_profile) {
     guest.style.display      = 'block';
     student.style.display    = 'none';
     instructor.style.display = 'none';
-    navUser.style.display    = 'none';
     navDash.style.display    = 'none';
+    jdy_toggleNavAuth(false);
     return;
   }
 
   guest.style.display = 'none';
-  navUser.style.display = 'flex';
-  document.getElementById('nav-avatar').textContent = (_profile.full_name || '?').charAt(0).toUpperCase();
-  document.getElementById('nav-name').textContent   = _profile.full_name || _session.user.email;
+  jdy_toggleNavAuth(true, _profile);
 
   if (_profile.role === 'instructor') {
     student.style.display    = 'none';
