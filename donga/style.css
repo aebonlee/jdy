@@ -654,6 +654,34 @@ img { max-width: 100%; }
 @keyframes jdy-spin   { to   { transform: rotate(360deg); } }
 .jdy-fade { animation: jdy-fadein .3s ease; }
 
+/* ── Pitch Eval Table ────────────────────────────────────── */
+.pitch-input {
+  width: 56px;
+  padding: 5px 4px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+  font-size: .875rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color var(--transition), background var(--transition);
+  -moz-appearance: textfield;
+}
+.pitch-input::-webkit-inner-spin-button,
+.pitch-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.pitch-input:focus  { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.pitch-input.filled { background: #f0fdf4; border-color: #86efac; }
+.pitch-input.over   { background: #fef2f2; border-color: var(--danger); }
+.pitch-total-cell   { font-weight: 800; font-size: .95rem; color: var(--primary); text-align: center !important; }
+.pitch-sticky-1     { position: sticky; left: 0;    background: var(--surface2) !important; z-index: 2; min-width: 48px;  text-align: center !important; }
+.pitch-sticky-2     { position: sticky; left: 48px; background: var(--surface2) !important; z-index: 2; min-width: 110px; border-right: 2px solid var(--border) !important; }
+.pitch-head-sticky  { z-index: 3 !important; }
+#pitch-table thead th { text-align: center; white-space: normal; line-height: 1.3; font-size: .75rem; padding: 10px 8px; }
+#pitch-table td        { padding: 8px 6px; text-align: center; }
+#pitch-table tbody tr:hover .pitch-sticky-1,
+#pitch-table tbody tr:hover .pitch-sticky-2 { background: #f8faff !important; }
+
 /* ── Footer ──────────────────────────────────────────────── */
 .jdy-footer {
   background: #1e293b;

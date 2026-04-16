@@ -87,21 +87,83 @@
       <!-- 강의 선택 탭 -->
       <div id="course-tabs" class="jdy-tabs"></div>
 
-      <!-- 진행 현황 -->
-      <div class="jdy-progress-box" id="progress-box">
-        <div>
-          <div class="jdy-progress-num"><span id="prog-done">0</span>/<span id="prog-total">0</span></div>
-          <div class="jdy-progress-text">동료평가 완료</div>
-        </div>
-        <div class="jdy-progress-track">
-          <div class="jdy-progress-fill" id="prog-bar" style="width:0%"></div>
-        </div>
+      <!-- 평가 방식 탭 -->
+      <div class="jdy-tabs" id="eval-type-tabs"
+           style="border-bottom:none;margin-bottom:16px;margin-top:0;gap:6px;">
+        <button class="jdy-tab active" data-type="peer" onclick="switchEvalType('peer')">
+          <i class="fa-solid fa-star-half-stroke"></i> 동료평가 (별점)
+        </button>
+        <button class="jdy-tab" data-type="pitch" onclick="switchEvalType('pitch')">
+          <i class="fa-solid fa-table-list"></i> 발표평가 (점수표)
+        </button>
       </div>
 
-      <!-- 동료 목록 -->
-      <div id="classmates-area">
-        <div class="jdy-empty"><div class="jdy-spinner"></div></div>
-      </div>
+      <!-- ── 동료평가 영역 ── -->
+      <div id="peer-eval-area">
+        <!-- 진행 현황 -->
+        <div class="jdy-progress-box" id="progress-box">
+          <div>
+            <div class="jdy-progress-num"><span id="prog-done">0</span>/<span id="prog-total">0</span></div>
+            <div class="jdy-progress-text">동료평가 완료</div>
+          </div>
+          <div class="jdy-progress-track">
+            <div class="jdy-progress-fill" id="prog-bar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- 동료 목록 -->
+        <div id="classmates-area">
+          <div class="jdy-empty"><div class="jdy-spinner"></div></div>
+        </div>
+      </div><!-- /peer-eval-area -->
+
+      <!-- ── 발표평가 영역 ── -->
+      <div id="pitch-eval-area" style="display:none">
+        <div class="jdy-card" style="padding:0;overflow:hidden;">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);
+                      display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:700;font-size:1rem;">발표평가 점수표</div>
+              <div style="font-size:.8rem;color:var(--text2);margin-top:2px;">
+                각 항목을 0부터 최대 점수까지 입력하세요. 자신은 제외됩니다.
+              </div>
+            </div>
+            <span id="pitch-save-status" style="font-size:.8rem;color:var(--success);margin-left:auto;"></span>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table class="jdy-table" id="pitch-table" style="min-width:760px;border-radius:0;">
+              <thead>
+                <tr>
+                  <th class="pitch-sticky-1 pitch-head-sticky">순번</th>
+                  <th class="pitch-sticky-2 pitch-head-sticky">이름</th>
+                  <th>자기이해<br>+적성<br><small style="color:var(--primary);font-weight:400">(0~20)</small></th>
+                  <th>창업<br>아이템<br><small style="color:var(--primary);font-weight:400">(0~15)</small></th>
+                  <th>거시<br>환경<br><small style="color:var(--primary);font-weight:400">(0~15)</small></th>
+                  <th>고객/<br>시장<br><small style="color:var(--primary);font-weight:400">(0~10)</small></th>
+                  <th>수익<br>구조<br><small style="color:var(--primary);font-weight:400">(0~15)</small></th>
+                  <th>실행<br>준비<br><small style="color:var(--primary);font-weight:400">(0~15)</small></th>
+                  <th>지원<br>전략<br><small style="color:var(--primary);font-weight:400">(0~10)</small></th>
+                  <th style="color:var(--primary);">총점<br><small style="color:var(--text3);font-weight:400">(100)</small></th>
+                </tr>
+              </thead>
+              <tbody id="pitch-tbody">
+                <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3)">강의를 선택하세요</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="padding:14px 20px;border-top:1px solid var(--border);
+                      display:flex;align-items:center;gap:10px;justify-content:flex-end;">
+            <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="loadPitchTable()">
+              <i class="fa-solid fa-rotate-right"></i> 새로고침
+            </button>
+            <button class="jdy-btn jdy-btn-primary" onclick="savePitchEvals()">
+              <i class="fa-solid fa-floppy-disk"></i> 저장
+            </button>
+          </div>
+        </div>
+      </div><!-- /pitch-eval-area -->
 
     </div>
   </section>
@@ -158,10 +220,12 @@
 
 let _session = null;
 let _profile = null;
-let _courses  = [];   // 수강 중인 강의 목록
+let _courses  = [];
 let _activeCourseId  = null;
 let _classmates      = [];
-let _myEvals         = {};   // evaluatee_id → eval object
+let _myEvals         = {};   // evaluatee_id → eval object (별점)
+let _myPitchEvals    = {};   // evaluatee_id → pitch eval object
+let _evalType        = 'peer'; // 'peer' | 'pitch'
 
 const CRITERIA = [
   { name: 'score_participation',  label: '참여도'  },
@@ -220,12 +284,23 @@ function buildCourseTabs() {
   ).join('');
 }
 
+// ── 평가 방식 탭 전환 ────────────────────────────────────
+function switchEvalType(type) {
+  _evalType = type;
+  document.querySelectorAll('#eval-type-tabs .jdy-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.type === type)
+  );
+  document.getElementById('peer-eval-area').style.display  = type === 'peer'  ? 'block' : 'none';
+  document.getElementById('pitch-eval-area').style.display = type === 'pitch' ? 'block' : 'none';
+  if (type === 'pitch' && _activeCourseId) loadPitchTable();
+}
+
 // ── 강의 선택 ─────────────────────────────────────────────
 async function selectCourse(courseId) {
   _activeCourseId = courseId;
 
-  // 탭 활성화
-  document.querySelectorAll('.jdy-tab').forEach(t =>
+  // 강의 탭 활성화 (course-tabs 내 탭만)
+  document.querySelectorAll('#course-tabs .jdy-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.cid === courseId)
   );
 
@@ -236,8 +311,12 @@ async function selectCourse(courseId) {
   evals.forEach(e => { _myEvals[e.evaluatee_id] = e; });
   jdy_loading(false);
 
-  renderClassmates();
-  updateProgress();
+  if (_evalType === 'peer') {
+    renderClassmates();
+    updateProgress();
+  } else {
+    await loadPitchTable();
+  }
 }
 
 // ── 동료 목록 렌더 ────────────────────────────────────────
@@ -276,6 +355,93 @@ function updateProgress() {
   document.getElementById('prog-done').textContent  = done;
   document.getElementById('prog-total').textContent = total;
   document.getElementById('prog-bar').style.width   = pct + '%';
+}
+
+// ── 발표평가 테이블 ───────────────────────────────────────
+async function loadPitchTable() {
+  const tbody = document.getElementById('pitch-tbody');
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3)">로딩 중...</td></tr>';
+
+  const pitchEvals = await jdy_getMyPitchEvals(_activeCourseId, _session.user.id);
+  _myPitchEvals = {};
+  pitchEvals.forEach(e => { _myPitchEvals[e.evaluatee_id] = e; });
+
+  if (!_classmates.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3)">같은 수업 수강생이 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = _classmates.map((c, idx) => {
+    const ex = _myPitchEvals[c.id] || {};
+    const total = jdy_pitchTotal(ex);
+
+    const inputCells = JDY_PITCH_CRITERIA.map(cr => {
+      const val = ex[cr.col] != null ? ex[cr.col] : '';
+      const cls = val !== '' ? ' filled' : '';
+      return `<td><input type="number" class="pitch-input${cls}"
+        min="0" max="${cr.max}" value="${val}"
+        data-col="${cr.col}" data-max="${cr.max}"
+        oninput="onPitchInput(this,'${c.id}')"></td>`;
+    }).join('');
+
+    return `<tr data-eid="${c.id}">
+      <td class="pitch-sticky-1">${idx + 1}</td>
+      <td class="pitch-sticky-2" style="text-align:left;">${c.full_name || '(미설정)'}</td>
+      ${inputCells}
+      <td class="pitch-total-cell" id="ptotal-${c.id}">${total || 0}</td>
+    </tr>`;
+  }).join('');
+}
+
+function onPitchInput(input, evaluateeId) {
+  // 범위 초과 시 클램프
+  const max = parseInt(input.dataset.max);
+  let v = parseInt(input.value);
+  if (v > max) { input.value = max; v = max; }
+  if (v < 0)   { input.value = 0;   v = 0; }
+  input.classList.toggle('filled', input.value !== '');
+  input.classList.toggle('over',   false);
+
+  // 해당 행 총점 업데이트
+  const row = document.querySelector(`tr[data-eid="${evaluateeId}"]`);
+  const inputs = row.querySelectorAll('.pitch-input');
+  const total = Array.from(inputs).reduce((s, inp) => s + (parseInt(inp.value) || 0), 0);
+  document.getElementById(`ptotal-${evaluateeId}`).textContent = total;
+}
+
+async function savePitchEvals() {
+  const rows = document.querySelectorAll('#pitch-tbody tr[data-eid]');
+  const batch = [];
+
+  for (const row of rows) {
+    const evaluateeId = row.dataset.eid;
+    const inputs = row.querySelectorAll('.pitch-input');
+    const hasAny = Array.from(inputs).some(inp => inp.value !== '');
+    if (!hasAny) continue;
+
+    const ev = { evaluatee_id: evaluateeId, course_id: _activeCourseId };
+    inputs.forEach(inp => {
+      ev[inp.dataset.col] = inp.value !== '' ? parseInt(inp.value) : null;
+    });
+    batch.push(ev);
+  }
+
+  if (!batch.length) { jdy_toast('error', '입력된 점수가 없습니다.'); return; }
+
+  jdy_loading(true);
+  const { error } = await jdy_savePitchEvalsBatch(batch);
+  jdy_loading(false);
+
+  if (error) { jdy_toast('error', '저장 실패: ' + error.message); return; }
+
+  jdy_toast('success', `${batch.length}건 저장 완료!`);
+  document.getElementById('pitch-save-status').textContent =
+    `✓ ${batch.length}건 저장 · ${new Date().toLocaleTimeString('ko-KR')}`;
+
+  // 로컬 캐시 갱신
+  const fresh = await jdy_getMyPitchEvals(_activeCourseId, _session.user.id);
+  _myPitchEvals = {};
+  fresh.forEach(e => { _myPitchEvals[e.evaluatee_id] = e; });
 }
 
 // ── 평가 모달 열기 ────────────────────────────────────────

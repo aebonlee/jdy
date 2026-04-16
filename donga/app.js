@@ -178,6 +178,65 @@ async function jdy_getAllEvalsForCourse(courseId) {
 }
 
 // ============================================================
+// 발표평가 항목 정의 (공통 상수)
+// ============================================================
+
+const JDY_PITCH_CRITERIA = [
+  { col: 'score_self_understanding', label: '자기이해+적성', max: 20 },
+  { col: 'score_startup_item',       label: '창업아이템',    max: 15 },
+  { col: 'score_macro_env',          label: '거시환경',      max: 15 },
+  { col: 'score_customer_market',    label: '고객/시장',     max: 10 },
+  { col: 'score_revenue',            label: '수익구조',      max: 15 },
+  { col: 'score_execution',          label: '실행준비',      max: 15 },
+  { col: 'score_support_strategy',   label: '지원전략',      max: 10 },
+];
+
+// ============================================================
+// 발표평가 DB 함수
+// ============================================================
+
+/** 내가 작성한 발표평가 목록 */
+async function jdy_getMyPitchEvals(courseId, myId) {
+  const { data, error } = await sb
+    .from('jdy_pitch_evaluations')
+    .select('*')
+    .eq('course_id', courseId)
+    .eq('evaluator_id', myId);
+  if (error) { console.error('getMyPitchEvals:', error); return []; }
+  return data || [];
+}
+
+/** 발표평가 일괄 저장 (upsert) */
+async function jdy_savePitchEvalsBatch(evals) {
+  const session = await jdy_getSession();
+  if (!session) return { error: '로그인이 필요합니다.' };
+  const rows = evals.map(e => ({ ...e, evaluator_id: session.user.id }));
+  const { error } = await sb
+    .from('jdy_pitch_evaluations')
+    .upsert(rows, { onConflict: 'evaluator_id,evaluatee_id,course_id' });
+  return { error };
+}
+
+/** 교수자용: 강의 전체 발표평가 조회 */
+async function jdy_getAllPitchEvalsForCourse(courseId) {
+  const { data, error } = await sb
+    .from('jdy_pitch_evaluations')
+    .select(`
+      *,
+      evaluator:jdy_profiles!evaluator_id(full_name, student_id),
+      evaluatee:jdy_profiles!evaluatee_id(full_name, student_id)
+    `)
+    .eq('course_id', courseId);
+  if (error) { console.error('getAllPitchEvals:', error); return []; }
+  return data || [];
+}
+
+/** 발표평가 총점 계산 */
+function jdy_pitchTotal(ev) {
+  return JDY_PITCH_CRITERIA.reduce((sum, c) => sum + (parseInt(ev[c.col]) || 0), 0);
+}
+
+// ============================================================
 // 네비바 Auth 상태 토글 (공통)
 // ============================================================
 
