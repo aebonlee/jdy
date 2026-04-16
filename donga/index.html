@@ -472,7 +472,8 @@ async function _handleSession(session) {
 
   // 첫 OAuth 로그인 → 프로필 자동 생성
   if (!_profile) {
-    await jdy_upsertProfile({ full_name: jdy_fallbackName(session) });
+    const { error: initErr } = await jdy_upsertProfile({ full_name: jdy_fallbackName(session) });
+    if (initErr) console.error('[_handleSession] 프로필 초기 생성 실패:', initErr);
     _profile = await jdy_getProfile(session.user.id);
   }
 
@@ -943,17 +944,31 @@ async function saveProfile() {
 
   jdy_loading(true);
 
-  const { error: pErr } = await jdy_upsertProfile({ full_name: name, student_id: sid, section });
+  // _session 직접 사용 (jdy_getSession() 재호출 없이 확실한 세션으로 upsert)
+  const upsertPayload = {
+    id:         _session.user.id,
+    email:      _session.user.email || '',  // Kakao 등 email null 대비
+    full_name:  name,
+    student_id: sid,
+    section:    section,
+  };
+  const { error: pErr } = await sb
+    .from('jdy_profiles')
+    .upsert(upsertPayload, { onConflict: 'id' });
+
   if (pErr) {
     jdy_loading(false);
-    jdy_toast('error', '프로필 저장 실패: ' + pErr);
+    console.error('[saveProfile] upsert 실패:', pErr);
+    jdy_toast('error', '프로필 저장 실패: ' + (pErr.message || JSON.stringify(pErr)));
     return;
   }
 
   const { error: eErr } = await jdy_enrollInSection(section);
+  // 23505 = unique violation (이미 수강중) → 무시
   if (eErr && eErr.code !== '23505') {
     jdy_loading(false);
-    jdy_toast('error', '수강신청 실패: ' + (eErr.message || eErr));
+    console.error('[saveProfile] 수강신청 실패:', eErr);
+    jdy_toast('error', '수강신청 실패: ' + (eErr.message || String(eErr)));
     return;
   }
 
