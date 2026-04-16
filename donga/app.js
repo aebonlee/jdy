@@ -316,6 +316,80 @@ function jdy_openAuthModal(mode = 'login') {
 }
 
 // ============================================================
+// 분반(Section) 지원 함수
+// ============================================================
+
+/**
+ * 분반 코드로 해당 분반의 course_id를 찾아 수강신청
+ * @param {string} section - 'Q1' | 'Q2' | 'Y2'
+ */
+async function jdy_enrollInSection(section) {
+  const courses = await jdy_getCourses(true);
+  const course  = courses.find(c => c.section === section);
+  if (!course) return { error: `${section}반 강의를 찾을 수 없습니다. 교수자에게 문의하세요.` };
+  return await jdy_enroll(course.id);
+}
+
+/**
+ * 여러 강의의 수강생을 한 번에 조회 (분반 정보 포함)
+ * @param {Array} courses - [{id, section, name}, ...]
+ */
+async function jdy_getMultiCourseStudents(courses) {
+  const courseIds = courses.map(c => c.id);
+  const { data, error } = await sb
+    .from('jdy_enrollments')
+    .select('course_id, student:jdy_profiles(id, full_name, student_id, email)')
+    .in('course_id', courseIds);
+  if (error) { console.error('getMultiCourseStudents:', error); return []; }
+
+  const courseMap = Object.fromEntries(courses.map(c => [c.id, c.section || c.name]));
+  const seen = new Set();
+  return (data || []).reduce((acc, row) => {
+    const s = row.student;
+    if (!s || seen.has(s.id)) return acc;
+    seen.add(s.id);
+    acc.push({ ...s, section: courseMap[row.course_id] || '-' });
+    return acc;
+  }, []);
+}
+
+/**
+ * 여러 강의의 동료평가를 한 번에 조회
+ * @param {string[]} courseIds
+ */
+async function jdy_getMultiCourseEvals(courseIds) {
+  if (!courseIds.length) return [];
+  const { data, error } = await sb
+    .from('jdy_peer_evaluations')
+    .select(`
+      *,
+      evaluator:jdy_profiles!evaluator_id(full_name),
+      evaluatee:jdy_profiles!evaluatee_id(full_name, student_id)
+    `)
+    .in('course_id', courseIds);
+  if (error) { console.error('getMultiCourseEvals:', error); return []; }
+  return data || [];
+}
+
+/**
+ * 여러 강의의 발표평가를 한 번에 조회
+ * @param {string[]} courseIds
+ */
+async function jdy_getMultiCoursePitchEvals(courseIds) {
+  if (!courseIds.length) return [];
+  const { data, error } = await sb
+    .from('jdy_pitch_evaluations')
+    .select(`
+      *,
+      evaluator:jdy_profiles!evaluator_id(full_name, student_id),
+      evaluatee:jdy_profiles!evaluatee_id(full_name, student_id)
+    `)
+    .in('course_id', courseIds);
+  if (error) { console.error('getMultiCoursePitchEvals:', error); return []; }
+  return data || [];
+}
+
+// ============================================================
 // UI Utilities
 // ============================================================
 

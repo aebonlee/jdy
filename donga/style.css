@@ -301,6 +301,31 @@ img { max-width: 100%; }
   font-weight: 600;
 }
 
+/* ── 분반 배지 ──────────────────────────────────────────── */
+.jdy-section-badge {
+  display: inline-block;
+  font-size: .72rem;
+  font-weight: 700;
+  border-radius: 100px;
+  padding: 3px 10px;
+  letter-spacing: .4px;
+}
+.jdy-section-Q1 { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.jdy-section-Q2 { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.jdy-section-Y2 { background: #faf5ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+/* 대시보드 분반 탭 배지 */
+.jdy-sec-tab-Q1 { --tab-color: #1d4ed8; }
+.jdy-sec-tab-Q2 { --tab-color: #15803d; }
+.jdy-sec-tab-Y2 { --tab-color: #7c3aed; }
+.jdy-sec-tab-all { --tab-color: #64748b; }
+.jdy-tab.jdy-sec-tab-Q1.active  { color: #1d4ed8; border-color: #1d4ed8; }
+.jdy-tab.jdy-sec-tab-Q2.active  { color: #15803d; border-color: #15803d; }
+.jdy-tab.jdy-sec-tab-Y2.active  { color: #7c3aed; border-color: #7c3aed; }
+
+/* 테이블 내 분반 셀 */
+td.cell-sec { white-space: nowrap; }
+
 /* ── Auth Section ────────────────────────────────────────── */
 .jdy-auth-box {
   max-width: 420px;

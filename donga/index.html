@@ -155,8 +155,20 @@
             <input class="jdy-input" type="text" id="pf-name" required placeholder="홍길동">
           </div>
           <div class="jdy-form-group">
-            <label class="jdy-label">학번</label>
-            <input class="jdy-input" type="text" id="pf-sid" placeholder="예: 2024001">
+            <label class="jdy-label">학번 *</label>
+            <input class="jdy-input" type="text" id="pf-sid" required placeholder="예: 2024001">
+          </div>
+          <div class="jdy-form-group">
+            <label class="jdy-label">분반 *</label>
+            <select class="jdy-select" id="pf-section" required>
+              <option value="">- 분반 선택 -</option>
+              <option value="Q1">Q1반</option>
+              <option value="Q2">Q2반</option>
+              <option value="Y2">Y2반</option>
+            </select>
+            <p style="font-size:.75rem;color:var(--text3);margin-top:6px;">
+              <i class="fa-solid fa-circle-info"></i> 선택한 분반 강의에 자동으로 등록됩니다.
+            </p>
           </div>
         </form>
       </div>
@@ -189,14 +201,23 @@
               <select class="jdy-select" id="c-sem" required>
                 <option value="2025-1">2025년 1학기</option>
                 <option value="2025-2">2025년 2학기</option>
-                <option value="2026-1">2026년 1학기</option>
+                <option value="2026-1" selected>2026년 1학기</option>
                 <option value="2026-2">2026년 2학기</option>
               </select>
             </div>
             <div class="jdy-form-group">
               <label class="jdy-label">연도 *</label>
-              <input class="jdy-input" type="number" id="c-year" value="2025" required>
+              <input class="jdy-input" type="number" id="c-year" value="2026" required>
             </div>
+          </div>
+          <div class="jdy-form-group">
+            <label class="jdy-label">분반</label>
+            <select class="jdy-select" id="c-section">
+              <option value="">없음 (분반 미구분)</option>
+              <option value="Q1">Q1반</option>
+              <option value="Q2">Q2반</option>
+              <option value="Y2">Y2반</option>
+            </select>
           </div>
         </form>
       </div>
@@ -283,9 +304,15 @@ async function loadCourses() {
   list.innerHTML = courses.map(c => {
     const enrolled = enrolledIds.has(c.id);
     const semLabel = c.semester.replace('-1', '년 1학기').replace('-2', '년 2학기');
+    const secBadge = c.section
+      ? `<span class="jdy-section-badge jdy-section-${c.section}">${c.section}반</span>`
+      : '';
     return `
       <div class="jdy-course-card">
-        <span class="jdy-course-badge">${c.year} · ${semLabel}</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <span class="jdy-course-badge">${c.year} · ${semLabel}</span>
+          ${secBadge}
+        </div>
         <div class="jdy-course-name">${c.name}</div>
         <div class="jdy-course-desc">${c.description || '강의 설명 준비 중입니다.'}</div>
         <div class="jdy-course-meta">
@@ -296,7 +323,7 @@ async function loadCourses() {
              ${_session ? `<button class="jdy-btn jdy-btn-secondary jdy-btn-sm" style="margin-left:8px" onclick="handleUnenroll('${c.id}')">수강취소</button>` : ''}`
           : _session
             ? `<button class="jdy-btn jdy-btn-primary jdy-btn-sm" onclick="handleEnroll('${c.id}')"><i class="fa-solid fa-plus"></i> 수강신청</button>`
-            : `<button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signInGoogle()">로그인 후 신청</button>`
+            : `<button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_openAuthModal('login')">로그인 후 신청</button>`
         }
       </div>`;
   }).join('');
@@ -367,21 +394,41 @@ async function loadEvalStats() {
   document.getElementById('stat-evals').textContent = total;
 }
 
-// ── 프로필 저장 ───────────────────────────────────────────
+// ── 프로필 저장 (분반 선택 + 자동 수강신청 포함) ──────────
 async function saveProfile() {
-  const name = document.getElementById('pf-name').value.trim();
-  const sid  = document.getElementById('pf-sid').value.trim();
-  if (!name) { jdy_toast('error', '이름을 입력해주세요.'); return; }
+  const name    = document.getElementById('pf-name').value.trim();
+  const sid     = document.getElementById('pf-sid').value.trim();
+  const section = document.getElementById('pf-section').value;
+  if (!name)    { jdy_toast('error', '이름을 입력해주세요.');  return; }
+  if (!sid)     { jdy_toast('error', '학번을 입력해주세요.');  return; }
+  if (!section) { jdy_toast('error', '분반을 선택해주세요.'); return; }
 
   jdy_loading(true);
-  const { error } = await jdy_upsertProfile({ full_name: name, student_id: sid || null });
-  jdy_loading(false);
 
-  if (error) { jdy_toast('error', '저장 실패: ' + error); return; }
+  // 1. 프로필 저장
+  const { error: pErr } = await jdy_upsertProfile({
+    full_name: name,
+    student_id: sid,
+    section
+  });
+  if (pErr) { jdy_loading(false); jdy_toast('error', '저장 실패: ' + pErr); return; }
+
+  // 2. 해당 분반 강의에 자동 수강신청
+  const { error: eErr } = await jdy_enrollInSection(section);
+  if (eErr) {
+    // 이미 등록된 경우(23505 unique violation)는 무시
+    if (!eErr.code || eErr.code !== '23505') {
+      jdy_loading(false);
+      jdy_toast('error', '수강신청 실패: ' + (eErr.message || eErr));
+      return;
+    }
+  }
 
   _profile = await jdy_getProfile(_session.user.id);
+  jdy_loading(false);
   document.getElementById('profile-modal').style.display = 'none';
-  jdy_toast('success', '프로필 저장 완료!');
+  jdy_toast('success', `${section}반 등록 완료! 환영합니다, ${name}님 🎉`);
+  await loadCourses();
   renderAuthSection();
 }
 
@@ -390,15 +437,16 @@ function openAddCourseModal()  { document.getElementById('add-course-modal').sty
 function closeAddCourseModal() { document.getElementById('add-course-modal').style.display = 'none'; }
 
 async function addCourse() {
-  const name = document.getElementById('c-name').value.trim();
-  const desc = document.getElementById('c-desc').value.trim();
-  const sem  = document.getElementById('c-sem').value;
-  const year = parseInt(document.getElementById('c-year').value);
+  const name    = document.getElementById('c-name').value.trim();
+  const desc    = document.getElementById('c-desc').value.trim();
+  const sem     = document.getElementById('c-sem').value;
+  const year    = parseInt(document.getElementById('c-year').value);
+  const section = document.getElementById('c-section').value || null;
   if (!name) { jdy_toast('error', '강의명을 입력해주세요.'); return; }
 
   jdy_loading(true);
   const { error } = await sb.from('jdy_courses').insert({
-    name, description: desc || null, semester: sem, year,
+    name, description: desc || null, semester: sem, year, section,
     instructor_id: _session.user.id
   });
   jdy_loading(false);
