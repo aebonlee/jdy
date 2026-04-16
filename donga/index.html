@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>동아방송대 | 직업미래연구소 정동엽 박사</title>
+  <meta name="description" content="동아방송대학교 정동엽 교수 강의 페이지. 강의과목 안내 및 동료평가 시스템.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="jdy-nav">
+  <div class="jdy-nav-inner">
+    <a href="../" class="jdy-nav-brand">
+      <i class="fa-solid fa-house"></i>
+      직업미래연구소
+      <span>/ 동아방송대</span>
+    </a>
+    <div class="jdy-nav-links">
+      <a href="index.html" class="jdy-nav-link active">강의 홈</a>
+      <a href="eval.html"  class="jdy-nav-link" id="nav-eval">동료평가</a>
+      <a href="dashboard.html" class="jdy-nav-link" id="nav-dash" style="display:none">대시보드</a>
+    </div>
+    <div id="nav-user" class="jdy-nav-user" style="display:none">
+      <div class="jdy-avatar" id="nav-avatar">?</div>
+      <span id="nav-name"></span>
+      <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signOut()">로그아웃</button>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="jdy-page">
+  <section class="jdy-hero">
+    <div class="jdy-container jdy-hero-content">
+      <div class="jdy-hero-badge">동아방송예술대학교 · 정동엽 교수</div>
+      <h1>강의과목 안내 &amp;<br>동료평가 시스템</h1>
+      <p>강의 정보를 확인하고, 팀 프로젝트 동료평가를 진행하세요.<br>구글 또는 카카오 계정으로 간편하게 시작할 수 있습니다.</p>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────────────────────────────────
+       강의과목 안내 (공개)
+  ──────────────────────────────────────────────────────── -->
+  <section class="jdy-section">
+    <div class="jdy-container">
+      <div class="jdy-section-header">
+        <span class="jdy-sub-label">COURSES</span>
+        <h2 class="jdy-section-title">강의과목 안내</h2>
+        <p class="jdy-section-desc">현재 진행 중인 강의 과목 목록입니다. 수강생은 로그인 후 수강신청하세요.</p>
+      </div>
+      <div class="jdy-grid-3" id="course-list">
+        <!-- JS로 채워짐 -->
+        <div class="jdy-empty"><div class="jdy-spinner"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────────────────────────────────
+       인증 섹션
+  ──────────────────────────────────────────────────────── -->
+  <section class="jdy-section" style="background:var(--surface2);border-top:1px solid var(--border);">
+    <div class="jdy-container">
+
+      <!-- 비로그인 -->
+      <div id="auth-guest">
+        <div class="jdy-auth-box">
+          <i class="fa-solid fa-graduation-cap" style="font-size:2.5rem;color:var(--primary);margin-bottom:16px;"></i>
+          <h2>학습 시작하기</h2>
+          <p>동료평가에 참여하려면 로그인이 필요합니다.<br>구글 또는 카카오 계정으로 간편하게 가입하세요.</p>
+          <button class="jdy-btn jdy-btn-google jdy-btn-full" onclick="jdy_signInGoogle()">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+            Google로 시작하기
+          </button>
+          <div class="jdy-auth-divider">또는</div>
+          <button class="jdy-btn jdy-btn-kakao jdy-btn-full" onclick="jdy_signInKakao()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919"><path d="M12 3C6.48 3 2 6.69 2 11.25c0 2.89 1.74 5.42 4.36 6.96l-1.11 4.09 4.73-3.12c.63.09 1.28.14 1.95.14 5.52 0 10-3.69 10-8.24C21.93 6.69 17.52 3 12 3z"/></svg>
+            카카오로 시작하기
+          </button>
+        </div>
+      </div>
+
+      <!-- 로그인 후: 학생 -->
+      <div id="auth-student" style="display:none">
+        <div class="jdy-section-header">
+          <span class="jdy-sub-label">내 학습 현황</span>
+          <h2 class="jdy-section-title">안녕하세요, <span id="student-name">-</span>님</h2>
+        </div>
+        <div class="jdy-grid-2" style="max-width:700px;margin:0 auto 32px;">
+          <div class="jdy-stat-card">
+            <div class="jdy-stat-icon">📚</div>
+            <div class="jdy-stat-val" id="stat-enrolled">-</div>
+            <div class="jdy-stat-label">수강 과목</div>
+          </div>
+          <div class="jdy-stat-card">
+            <div class="jdy-stat-icon">✅</div>
+            <div class="jdy-stat-val" id="stat-evals">-</div>
+            <div class="jdy-stat-label">완료한 동료평가</div>
+          </div>
+        </div>
+        <div style="text-align:center">
+          <a href="eval.html" class="jdy-btn jdy-btn-primary jdy-btn-lg">
+            <i class="fa-solid fa-star-half-stroke"></i> 동료평가 하러 가기
+          </a>
+        </div>
+      </div>
+
+      <!-- 로그인 후: 교수자 -->
+      <div id="auth-instructor" style="display:none">
+        <div class="jdy-section-header">
+          <span class="jdy-sub-label">교수자 메뉴</span>
+          <h2 class="jdy-section-title">안녕하세요, <span id="instructor-name">-</span> 교수님</h2>
+        </div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <a href="dashboard.html" class="jdy-btn jdy-btn-primary jdy-btn-lg">
+            <i class="fa-solid fa-chart-bar"></i> 동료평가 대시보드
+          </a>
+          <button class="jdy-btn jdy-btn-secondary jdy-btn-lg" onclick="openAddCourseModal()">
+            <i class="fa-solid fa-plus"></i> 강의 추가
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ────────────────────────────────────────────────────────
+       프로필 완성 모달 (최초 로그인)
+  ──────────────────────────────────────────────────────── -->
+  <div id="profile-modal" class="jdy-modal-bg" style="display:none">
+    <div class="jdy-modal">
+      <div class="jdy-modal-header">
+        <span class="jdy-modal-title">프로필 완성</span>
+      </div>
+      <div class="jdy-modal-body">
+        <p style="font-size:.875rem;color:var(--text2);margin-bottom:20px;">
+          처음 이용하시나요? 아래 정보를 입력하면 동료평가에 참여할 수 있습니다.
+        </p>
+        <form id="profile-form">
+          <div class="jdy-form-group">
+            <label class="jdy-label">이름 *</label>
+            <input class="jdy-input" type="text" id="pf-name" required placeholder="홍길동">
+          </div>
+          <div class="jdy-form-group">
+            <label class="jdy-label">학번</label>
+            <input class="jdy-input" type="text" id="pf-sid" placeholder="예: 2024001">
+          </div>
+        </form>
+      </div>
+      <div class="jdy-modal-footer">
+        <button class="jdy-btn jdy-btn-primary" onclick="saveProfile()">저장하고 시작하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 강의 추가 모달 (교수자용) -->
+  <div id="add-course-modal" class="jdy-modal-bg" style="display:none">
+    <div class="jdy-modal">
+      <div class="jdy-modal-header">
+        <span class="jdy-modal-title">강의 추가</span>
+        <button class="jdy-modal-close" onclick="closeAddCourseModal()">✕</button>
+      </div>
+      <div class="jdy-modal-body">
+        <form id="add-course-form">
+          <div class="jdy-form-group">
+            <label class="jdy-label">강의명 *</label>
+            <input class="jdy-input" type="text" id="c-name" required placeholder="직업진로설계">
+          </div>
+          <div class="jdy-form-group">
+            <label class="jdy-label">강의 설명</label>
+            <textarea class="jdy-textarea" id="c-desc" placeholder="강의에 대한 간략한 소개"></textarea>
+          </div>
+          <div class="jdy-grid-2">
+            <div class="jdy-form-group">
+              <label class="jdy-label">학기 *</label>
+              <select class="jdy-select" id="c-sem" required>
+                <option value="2025-1">2025년 1학기</option>
+                <option value="2025-2">2025년 2학기</option>
+                <option value="2026-1">2026년 1학기</option>
+                <option value="2026-2">2026년 2학기</option>
+              </select>
+            </div>
+            <div class="jdy-form-group">
+              <label class="jdy-label">연도 *</label>
+              <input class="jdy-input" type="number" id="c-year" value="2025" required>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="jdy-modal-footer">
+        <button class="jdy-btn jdy-btn-secondary" onclick="closeAddCourseModal()">취소</button>
+        <button class="jdy-btn jdy-btn-primary"   onclick="addCourse()">강의 등록</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="jdy-footer">
+    <p>직업미래연구소 · 정동엽 박사 | <a href="mailto:newjob4u@naver.com">newjob4u@naver.com</a></p>
+    <p style="margin-top:6px;font-size:.75rem;">© 2025 Job Future Institute. All rights reserved.</p>
+  </footer>
+</div>
+
+<!-- Toast & Loading -->
+<div id="jdy-toast" class="jdy-toast"></div>
+<div id="jdy-loading"><div class="jdy-spinner"></div></div>
+
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+<script>
+'use strict';
+
+let _session = null;
+let _profile = null;
+
+// ── 초기화 ────────────────────────────────────────────────
+(async () => {
+  jdy_loading(true);
+  try {
+    _session = await jdy_getSession();
+    if (_session) {
+      _profile = await jdy_getProfile(_session.user.id);
+      // 프로필 미완성 시 프로필 모달 표시
+      if (_profile && !_profile.full_name) {
+        document.getElementById('profile-modal').style.display = 'flex';
+      }
+    }
+  } finally {
+    jdy_loading(false);
+  }
+
+  await loadCourses();
+  renderAuthSection();
+
+  // 인증 상태 변경 감지
+  sb.auth.onAuthStateChange(async (event, session) => {
+    _session = session;
+    if (session) {
+      _profile = await jdy_getProfile(session.user.id);
+      if (_profile && !_profile.full_name) {
+        document.getElementById('profile-modal').style.display = 'flex';
+      }
+    } else {
+      _profile = null;
+    }
+    await loadCourses();
+    renderAuthSection();
+  });
+})();
+
+// ── 강의 목록 로드 ────────────────────────────────────────
+async function loadCourses() {
+  const list = document.getElementById('course-list');
+  const courses = await jdy_getCourses(true);
+
+  let enrolledIds = new Set();
+  if (_session) {
+    const enrollments = await jdy_getMyEnrollments(_session.user.id);
+    enrolledIds = new Set(enrollments.map(e => e.course_id));
+    document.getElementById('stat-enrolled').textContent = enrolledIds.size;
+  }
+
+  if (!courses.length) {
+    list.innerHTML = `<div class="jdy-empty" style="grid-column:1/-1"><div class="jdy-empty-icon">📋</div><p>등록된 강의가 없습니다.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = courses.map(c => {
+    const enrolled = enrolledIds.has(c.id);
+    const semLabel = c.semester.replace('-1', '년 1학기').replace('-2', '년 2학기');
+    return `
+      <div class="jdy-course-card">
+        <span class="jdy-course-badge">${c.year} · ${semLabel}</span>
+        <div class="jdy-course-name">${c.name}</div>
+        <div class="jdy-course-desc">${c.description || '강의 설명 준비 중입니다.'}</div>
+        <div class="jdy-course-meta">
+          <span><i class="fa-solid fa-user-tie"></i> ${c.instructor?.full_name || '정동엽 교수'}</span>
+        </div>
+        ${enrolled
+          ? `<span class="jdy-enrolled-badge">✓ 수강 중</span>
+             ${_session ? `<button class="jdy-btn jdy-btn-secondary jdy-btn-sm" style="margin-left:8px" onclick="handleUnenroll('${c.id}')">수강취소</button>` : ''}`
+          : _session
+            ? `<button class="jdy-btn jdy-btn-primary jdy-btn-sm" onclick="handleEnroll('${c.id}')"><i class="fa-solid fa-plus"></i> 수강신청</button>`
+            : `<button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signInGoogle()">로그인 후 신청</button>`
+        }
+      </div>`;
+  }).join('');
+}
+
+// ── 수강신청 / 취소 ───────────────────────────────────────
+async function handleEnroll(courseId) {
+  jdy_loading(true);
+  const { error } = await jdy_enroll(courseId);
+  jdy_loading(false);
+  if (error) { jdy_toast('error', '수강신청 실패: ' + error.message); return; }
+  jdy_toast('success', '수강신청 완료!');
+  await loadCourses();
+}
+
+async function handleUnenroll(courseId) {
+  if (!confirm('수강을 취소하시겠습니까?')) return;
+  jdy_loading(true);
+  const { error } = await jdy_unenroll(courseId);
+  jdy_loading(false);
+  if (error) { jdy_toast('error', '취소 실패: ' + error.message); return; }
+  jdy_toast('success', '수강취소 완료');
+  await loadCourses();
+}
+
+// ── 인증 영역 렌더 ────────────────────────────────────────
+function renderAuthSection() {
+  const guest      = document.getElementById('auth-guest');
+  const student    = document.getElementById('auth-student');
+  const instructor = document.getElementById('auth-instructor');
+  const navUser    = document.getElementById('nav-user');
+  const navDash    = document.getElementById('nav-dash');
+
+  if (!_session || !_profile) {
+    guest.style.display      = 'block';
+    student.style.display    = 'none';
+    instructor.style.display = 'none';
+    navUser.style.display    = 'none';
+    navDash.style.display    = 'none';
+    return;
+  }
+
+  guest.style.display = 'none';
+  navUser.style.display = 'flex';
+  document.getElementById('nav-avatar').textContent = (_profile.full_name || '?').charAt(0).toUpperCase();
+  document.getElementById('nav-name').textContent   = _profile.full_name || _session.user.email;
+
+  if (_profile.role === 'instructor') {
+    student.style.display    = 'none';
+    instructor.style.display = 'block';
+    navDash.style.display    = 'block';
+    document.getElementById('instructor-name').textContent = _profile.full_name || '교수님';
+  } else {
+    student.style.display    = 'block';
+    instructor.style.display = 'none';
+    navDash.style.display    = 'none';
+    document.getElementById('student-name').textContent = _profile.full_name || '학생';
+    loadEvalStats();
+  }
+}
+
+// ── 동료평가 완료 현황 ────────────────────────────────────
+async function loadEvalStats() {
+  if (!_session) return;
+  const enrollments = await jdy_getMyEnrollments(_session.user.id);
+  let total = 0;
+  for (const e of enrollments) {
+    const evals = await jdy_getMyEvals(e.course_id, _session.user.id);
+    total += evals.length;
+  }
+  document.getElementById('stat-evals').textContent = total;
+}
+
+// ── 프로필 저장 ───────────────────────────────────────────
+async function saveProfile() {
+  const name = document.getElementById('pf-name').value.trim();
+  const sid  = document.getElementById('pf-sid').value.trim();
+  if (!name) { jdy_toast('error', '이름을 입력해주세요.'); return; }
+
+  jdy_loading(true);
+  const { error } = await jdy_upsertProfile({ full_name: name, student_id: sid || null });
+  jdy_loading(false);
+
+  if (error) { jdy_toast('error', '저장 실패: ' + error); return; }
+
+  _profile = await jdy_getProfile(_session.user.id);
+  document.getElementById('profile-modal').style.display = 'none';
+  jdy_toast('success', '프로필 저장 완료!');
+  renderAuthSection();
+}
+
+// ── 강의 추가 (교수자) ────────────────────────────────────
+function openAddCourseModal()  { document.getElementById('add-course-modal').style.display = 'flex'; }
+function closeAddCourseModal() { document.getElementById('add-course-modal').style.display = 'none'; }
+
+async function addCourse() {
+  const name = document.getElementById('c-name').value.trim();
+  const desc = document.getElementById('c-desc').value.trim();
+  const sem  = document.getElementById('c-sem').value;
+  const year = parseInt(document.getElementById('c-year').value);
+  if (!name) { jdy_toast('error', '강의명을 입력해주세요.'); return; }
+
+  jdy_loading(true);
+  const { error } = await sb.from('jdy_courses').insert({
+    name, description: desc || null, semester: sem, year,
+    instructor_id: _session.user.id
+  });
+  jdy_loading(false);
+
+  if (error) { jdy_toast('error', '등록 실패: ' + error.message); return; }
+
+  jdy_toast('success', '강의가 등록되었습니다!');
+  closeAddCourseModal();
+  document.getElementById('add-course-form').reset();
+  await loadCourses();
+}
+</script>
+</body>
+</html>

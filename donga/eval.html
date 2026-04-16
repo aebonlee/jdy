@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>동료평가 | 동아방송대</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .eval-guide {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-size: .875rem;
+      color: var(--primary);
+    }
+    .eval-guide strong { font-weight: 700; }
+    .score-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: .75rem;
+      color: var(--text2);
+      margin-top: 8px;
+    }
+    .score-legend span::before { content: ''; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="jdy-nav">
+  <div class="jdy-nav-inner">
+    <a href="index.html" class="jdy-nav-brand">
+      <i class="fa-solid fa-arrow-left"></i>
+      동아방송대
+    </a>
+    <div class="jdy-nav-links">
+      <a href="index.html" class="jdy-nav-link">강의 홈</a>
+      <a href="eval.html"  class="jdy-nav-link active">동료평가</a>
+    </div>
+    <div class="jdy-nav-user">
+      <div class="jdy-avatar" id="nav-avatar">?</div>
+      <span id="nav-name" style="font-size:.875rem;color:var(--text2)"></span>
+      <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signOut()">로그아웃</button>
+    </div>
+  </div>
+</nav>
+
+<div class="jdy-page">
+  <section class="jdy-section">
+    <div class="jdy-container">
+
+      <!-- 페이지 헤더 -->
+      <div class="jdy-section-header">
+        <span class="jdy-sub-label">PEER EVALUATION</span>
+        <h2 class="jdy-section-title">동료평가</h2>
+        <p class="jdy-section-desc">같은 수업을 수강하는 동료를 평가해주세요. 평가 내용은 익명으로 처리됩니다.</p>
+      </div>
+
+      <!-- 평가 안내 -->
+      <div class="eval-guide">
+        <strong>📌 평가 안내</strong><br>
+        각 항목을 1~5점으로 평가하고 자유 의견을 작성해주세요. 평가자는 공개되지 않습니다.
+        <div class="score-legend">
+          <span>★☆☆☆☆ 1점 · 매우 미흡</span>
+          <span>★★☆☆☆ 2점 · 미흡</span>
+          <span>★★★☆☆ 3점 · 보통</span>
+          <span>★★★★☆ 4점 · 우수</span>
+          <span>★★★★★ 5점 · 매우 우수</span>
+        </div>
+      </div>
+
+      <!-- 강의 선택 탭 -->
+      <div id="course-tabs" class="jdy-tabs"></div>
+
+      <!-- 진행 현황 -->
+      <div class="jdy-progress-box" id="progress-box">
+        <div>
+          <div class="jdy-progress-num"><span id="prog-done">0</span>/<span id="prog-total">0</span></div>
+          <div class="jdy-progress-text">동료평가 완료</div>
+        </div>
+        <div class="jdy-progress-track">
+          <div class="jdy-progress-fill" id="prog-bar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- 동료 목록 -->
+      <div id="classmates-area">
+        <div class="jdy-empty"><div class="jdy-spinner"></div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="jdy-footer">
+    <p>직업미래연구소 · 정동엽 박사 | <a href="mailto:newjob4u@naver.com">newjob4u@naver.com</a></p>
+  </footer>
+</div>
+
+<!-- 평가 입력 모달 -->
+<div id="eval-modal" class="jdy-modal-bg" style="display:none">
+  <div class="jdy-modal">
+    <div class="jdy-modal-header">
+      <span class="jdy-modal-title" id="modal-title">동료평가</span>
+      <button class="jdy-modal-close" onclick="closeEvalModal()">✕</button>
+    </div>
+    <div class="jdy-modal-body">
+      <p style="font-size:.8rem;color:var(--text2);margin-bottom:16px;">
+        <i class="fa-solid fa-user-circle"></i> 평가 대상: <strong id="modal-name">-</strong>
+        &nbsp;|&nbsp; <span id="modal-sid" style="color:var(--text3)"></span>
+      </p>
+
+      <form id="eval-form">
+        <input type="hidden" id="modal-evaluatee-id">
+        <input type="hidden" id="modal-course-id">
+
+        <!-- 별점 항목 (JS로 삽입) -->
+        <div id="star-ratings"></div>
+
+        <div class="jdy-form-group" style="margin-top:16px;">
+          <label class="jdy-label">자유 의견 <span style="color:var(--text3);font-weight:400">(선택)</span></label>
+          <textarea class="jdy-textarea" id="eval-comment"
+                    placeholder="팀 활동에서 느낀 점, 개선사항, 칭찬할 점 등을 자유롭게 작성해주세요."
+                    rows="4"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="jdy-modal-footer">
+      <button class="jdy-btn jdy-btn-secondary" onclick="closeEvalModal()">취소</button>
+      <button class="jdy-btn jdy-btn-primary"   onclick="submitEval()">
+        <i class="fa-solid fa-paper-plane"></i> 평가 제출
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="jdy-toast" class="jdy-toast"></div>
+<div id="jdy-loading"><div class="jdy-spinner"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+<script>
+'use strict';
+
+let _session = null;
+let _profile = null;
+let _courses  = [];   // 수강 중인 강의 목록
+let _activeCourseId  = null;
+let _classmates      = [];
+let _myEvals         = {};   // evaluatee_id → eval object
+
+const CRITERIA = [
+  { name: 'score_participation',  label: '참여도'  },
+  { name: 'score_responsibility', label: '책임감'  },
+  { name: 'score_cooperation',    label: '협력도'  },
+  { name: 'score_communication',  label: '소통능력' },
+  { name: 'score_contribution',   label: '기여도'  },
+];
+
+// ── 초기화 ────────────────────────────────────────────────
+(async () => {
+  jdy_loading(true);
+  _session = await jdy_getSession();
+
+  if (!_session) {
+    location.href = 'index.html';
+    return;
+  }
+
+  _profile = await jdy_getProfile(_session.user.id);
+  if (!_profile?.full_name) {
+    alert('프로필을 먼저 완성해주세요.');
+    location.href = 'index.html';
+    return;
+  }
+
+  // 네비 사용자 표시
+  document.getElementById('nav-avatar').textContent = _profile.full_name.charAt(0).toUpperCase();
+  document.getElementById('nav-name').textContent   = _profile.full_name;
+
+  // 수강 강의 로드
+  const enrollments = await jdy_getMyEnrollments(_session.user.id);
+  _courses = enrollments.map(e => e.course).filter(Boolean);
+
+  jdy_loading(false);
+
+  if (!_courses.length) {
+    document.getElementById('classmates-area').innerHTML = `
+      <div class="jdy-empty">
+        <div class="jdy-empty-icon">📭</div>
+        <p>수강 중인 강의가 없습니다.<br><a href="index.html" style="color:var(--primary)">강의 홈</a>에서 수강신청 후 이용해주세요.</p>
+      </div>`;
+    document.getElementById('course-tabs').innerHTML = '';
+    document.getElementById('progress-box').style.display = 'none';
+    return;
+  }
+
+  buildCourseTabs();
+  await selectCourse(_courses[0].id);
+})();
+
+// ── 강의 탭 생성 ──────────────────────────────────────────
+function buildCourseTabs() {
+  const tabs = document.getElementById('course-tabs');
+  tabs.innerHTML = _courses.map(c =>
+    `<button class="jdy-tab" data-cid="${c.id}" onclick="selectCourse('${c.id}')">${c.name}</button>`
+  ).join('');
+}
+
+// ── 강의 선택 ─────────────────────────────────────────────
+async function selectCourse(courseId) {
+  _activeCourseId = courseId;
+
+  // 탭 활성화
+  document.querySelectorAll('.jdy-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.cid === courseId)
+  );
+
+  jdy_loading(true);
+  _classmates = await jdy_getClassmates(courseId, _session.user.id);
+  const evals  = await jdy_getMyEvals(courseId, _session.user.id);
+  _myEvals = {};
+  evals.forEach(e => { _myEvals[e.evaluatee_id] = e; });
+  jdy_loading(false);
+
+  renderClassmates();
+  updateProgress();
+}
+
+// ── 동료 목록 렌더 ────────────────────────────────────────
+function renderClassmates() {
+  const area = document.getElementById('classmates-area');
+
+  if (!_classmates.length) {
+    area.innerHTML = `<div class="jdy-empty"><div class="jdy-empty-icon">👥</div><p>같은 수업 수강생이 없습니다.</p></div>`;
+    return;
+  }
+
+  area.innerHTML = `<div class="jdy-classmate-grid">${
+    _classmates.map(c => {
+      const done   = !!_myEvals[c.id];
+      const initial = (c.full_name || '?').charAt(0).toUpperCase();
+      return `
+        <div class="jdy-classmate-card ${done ? 'done' : ''}"
+             onclick="${done ? '' : `openEvalModal('${c.id}','${escape(c.full_name)}','${c.student_id||''}')`}">
+          <div class="jdy-classmate-avatar">${initial}</div>
+          <div class="jdy-classmate-name">${c.full_name || '(이름 미설정)'}</div>
+          <div class="jdy-classmate-id">${c.student_id || ''}</div>
+          ${done
+            ? `<div class="jdy-done-check">✓</div>`
+            : `<button class="jdy-btn jdy-btn-primary jdy-btn-sm">평가하기</button>`}
+        </div>`;
+    }).join('')
+  }</div>`;
+}
+
+// ── 진행률 업데이트 ───────────────────────────────────────
+function updateProgress() {
+  const done  = Object.keys(_myEvals).length;
+  const total = _classmates.length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  document.getElementById('prog-done').textContent  = done;
+  document.getElementById('prog-total').textContent = total;
+  document.getElementById('prog-bar').style.width   = pct + '%';
+}
+
+// ── 평가 모달 열기 ────────────────────────────────────────
+function openEvalModal(evaluateeId, name, sid) {
+  const existing = _myEvals[evaluateeId] || {};
+  document.getElementById('modal-title').textContent        = `${unescape(name)} 님 평가`;
+  document.getElementById('modal-name').textContent         = unescape(name);
+  document.getElementById('modal-sid').textContent          = sid ? `학번: ${sid}` : '';
+  document.getElementById('modal-evaluatee-id').value       = evaluateeId;
+  document.getElementById('modal-course-id').value          = _activeCourseId;
+  document.getElementById('eval-comment').value             = existing.comment || '';
+
+  // 별점 위젯 삽입
+  const ratings = document.getElementById('star-ratings');
+  ratings.innerHTML = CRITERIA.map(c =>
+    jdy_starRatingHTML(c.name, c.label, existing[c.name] || 0)
+  ).join('');
+  jdy_bindStars(ratings);
+
+  document.getElementById('eval-modal').style.display = 'flex';
+}
+
+function closeEvalModal() {
+  document.getElementById('eval-modal').style.display = 'none';
+}
+
+// ── 평가 제출 ─────────────────────────────────────────────
+async function submitEval() {
+  const form        = document.getElementById('eval-form');
+  const evaluateeId = document.getElementById('modal-evaluatee-id').value;
+  const courseId    = document.getElementById('modal-course-id').value;
+  const comment     = document.getElementById('eval-comment').value.trim();
+
+  // 별점 값 수집 & 유효성 검사
+  const scores = {};
+  for (const c of CRITERIA) {
+    const val = parseInt(form.querySelector(`input[name="${c.name}"]`)?.value || '0');
+    if (!val || val < 1 || val > 5) {
+      jdy_toast('error', `'${c.label}' 점수를 선택해주세요.`);
+      return;
+    }
+    scores[c.name] = val;
+  }
+
+  jdy_loading(true);
+  const { error } = await jdy_submitEval({
+    evaluatee_id: evaluateeId,
+    course_id:    courseId,
+    comment:      comment || null,
+    ...scores
+  });
+  jdy_loading(false);
+
+  if (error) { jdy_toast('error', '제출 실패: ' + error.message); return; }
+
+  // 로컬 상태 갱신
+  const evs = await jdy_getMyEvals(courseId, _session.user.id);
+  _myEvals = {};
+  evs.forEach(e => { _myEvals[e.evaluatee_id] = e; });
+
+  closeEvalModal();
+  jdy_toast('success', '평가가 제출되었습니다!');
+  renderClassmates();
+  updateProgress();
+}
+</script>
+</body>
+</html>

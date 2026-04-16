@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>동료평가 대시보드 | 동아방송대</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .score-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .score-high   { background: #dcfce7; color: #15803d; }
+    .score-mid    { background: #fef9c3; color: #854d0e; }
+    .score-low    { background: #fee2e2; color: #b91c1c; }
+    .detail-grid  { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 16px 0; }
+    .detail-score { background: var(--bg); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+    .detail-score .val  { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+    .detail-score .lbl  { font-size: .7rem; color: var(--text2); margin-top: 2px; }
+    .eval-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      font-size: .875rem;
+    }
+    .eval-item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: .8rem;
+      color: var(--text2);
+    }
+    .eval-comment {
+      background: var(--surface2);
+      border-left: 3px solid var(--primary);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 8px 12px;
+      font-size: .8rem;
+      color: var(--text2);
+      margin-top: 8px;
+    }
+    .export-btn { margin-left: auto; }
+    @media (max-width:600px) {
+      .detail-grid { grid-template-columns: repeat(3,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="jdy-nav">
+  <div class="jdy-nav-inner">
+    <a href="index.html" class="jdy-nav-brand">
+      <i class="fa-solid fa-arrow-left"></i>
+      동아방송대
+    </a>
+    <div class="jdy-nav-links">
+      <a href="index.html"    class="jdy-nav-link">강의 홈</a>
+      <a href="dashboard.html" class="jdy-nav-link active">대시보드</a>
+    </div>
+    <div class="jdy-nav-user">
+      <div class="jdy-avatar" id="nav-avatar">?</div>
+      <span class="jdy-role-badge instructor">교수자</span>
+      <span id="nav-name" style="font-size:.875rem;color:var(--text2)"></span>
+      <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signOut()">로그아웃</button>
+    </div>
+  </div>
+</nav>
+
+<div class="jdy-page">
+  <section class="jdy-section">
+    <div class="jdy-container">
+
+      <!-- 페이지 헤더 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="jdy-sub-label">DASHBOARD</div>
+          <h2 style="font-size:1.8rem;font-weight:800;">동료평가 대시보드</h2>
+        </div>
+        <button class="jdy-btn jdy-btn-secondary" onclick="exportCSV()">
+          <i class="fa-solid fa-download"></i> CSV 내보내기
+        </button>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div class="jdy-grid-4" id="stat-cards" style="margin-bottom:32px;">
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">👥</div><div class="jdy-stat-val" id="s-students">-</div><div class="jdy-stat-label">전체 수강생</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">📝</div><div class="jdy-stat-val" id="s-evals">-</div><div class="jdy-stat-label">제출된 평가</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">📊</div><div class="jdy-stat-val" id="s-rate">-</div><div class="jdy-stat-label">평가 완료율</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">⭐</div><div class="jdy-stat-val" id="s-avg">-</div><div class="jdy-stat-label">전체 평균</div></div>
+      </div>
+
+      <!-- 강의 탭 -->
+      <div class="jdy-tabs" id="course-tabs"></div>
+
+      <!-- 학생 테이블 -->
+      <div class="jdy-card" style="padding:0;overflow:hidden;">
+        <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);">
+          <h3 style="font-size:1rem;font-weight:700;margin:0;">학생별 평가 현황</h3>
+          <input class="jdy-input" type="text" id="search-input"
+                 placeholder="이름 또는 학번 검색..."
+                 oninput="filterTable()"
+                 style="max-width:220px;margin-left:auto;">
+        </div>
+        <div class="jdy-table-wrap">
+          <table class="jdy-table">
+            <thead>
+              <tr>
+                <th>이름</th>
+                <th>학번</th>
+                <th>받은 평가</th>
+                <th>참여도</th>
+                <th>책임감</th>
+                <th>협력도</th>
+                <th>소통능력</th>
+                <th>기여도</th>
+                <th onclick="sortBy('avg')" style="cursor:pointer;">전체 평균 ↕</th>
+              </tr>
+            </thead>
+            <tbody id="students-tbody">
+              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="jdy-footer">
+    <p>직업미래연구소 · 정동엽 박사 | <a href="mailto:newjob4u@naver.com">newjob4u@naver.com</a></p>
+  </footer>
+</div>
+
+<!-- 학생 상세 모달 -->
+<div id="detail-modal" class="jdy-modal-bg" style="display:none">
+  <div class="jdy-modal" style="max-width:660px">
+    <div class="jdy-modal-header">
+      <div>
+        <div class="jdy-modal-title" id="detail-name">학생 이름</div>
+        <div style="font-size:.8rem;color:var(--text2);margin-top:2px;" id="detail-sid"></div>
+      </div>
+      <button class="jdy-modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="jdy-modal-body" id="detail-body">
+      <!-- 평균 점수 그리드 -->
+      <div id="detail-scores" class="detail-grid"></div>
+      <!-- 개별 평가 목록 -->
+      <h4 style="font-size:.875rem;font-weight:700;color:var(--text2);margin:16px 0 8px;">
+        <i class="fa-solid fa-list"></i> 개별 평가 내역 (<span id="detail-count">0</span>건)
+      </h4>
+      <div id="detail-evals"></div>
+    </div>
+    <div class="jdy-modal-footer">
+      <button class="jdy-btn jdy-btn-secondary" onclick="closeDetail()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div id="jdy-toast" class="jdy-toast"></div>
+<div id="jdy-loading"><div class="jdy-spinner"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+<script>
+'use strict';
+
+let _session   = null;
+let _profile   = null;
+let _courses   = [];       // 교수자 강의 목록
+let _activeCid = null;
+let _students  = [];       // 현재 강의 수강생
+let _evals     = [];       // 현재 강의 전체 평가
+let _filtered  = [];       // 검색/정렬 후 목록
+let _sortAsc   = false;
+
+const CRITERIA = [
+  { key: 'score_participation',  label: '참여도'  },
+  { key: 'score_responsibility', label: '책임감'  },
+  { key: 'score_cooperation',    label: '협력도'  },
+  { key: 'score_communication',  label: '소통능력' },
+  { key: 'score_contribution',   label: '기여도'  },
+];
+
+// ── 초기화 ────────────────────────────────────────────────
+(async () => {
+  jdy_loading(true);
+  _session = await jdy_getSession();
+
+  if (!_session) { location.href = 'index.html'; return; }
+
+  _profile = await jdy_getProfile(_session.user.id);
+  if (_profile?.role !== 'instructor') {
+    alert('교수자 계정만 접근할 수 있습니다.');
+    location.href = 'index.html';
+    return;
+  }
+
+  document.getElementById('nav-avatar').textContent = (_profile.full_name || '?').charAt(0).toUpperCase();
+  document.getElementById('nav-name').textContent   = _profile.full_name || '';
+
+  // 교수자 강의 로드
+  const allCourses = await jdy_getCourses(false);
+  _courses = allCourses.filter(c => c.instructor_id === _session.user.id);
+
+  jdy_loading(false);
+
+  if (!_courses.length) {
+    document.getElementById('course-tabs').innerHTML = '';
+    document.getElementById('students-tbody').innerHTML =
+      '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">등록된 강의가 없습니다.</td></tr>';
+    return;
+  }
+
+  buildTabs();
+  await loadCourseData(_courses[0].id);
+})();
+
+// ── 탭 ───────────────────────────────────────────────────
+function buildTabs() {
+  document.getElementById('course-tabs').innerHTML = _courses.map(c =>
+    `<button class="jdy-tab" data-cid="${c.id}" onclick="loadCourseData('${c.id}')">
+      ${c.name} <small style="color:var(--text3)">${c.semester}</small>
+    </button>`
+  ).join('');
+}
+
+// ── 강의 데이터 로드 ──────────────────────────────────────
+async function loadCourseData(courseId) {
+  _activeCid = courseId;
+  document.querySelectorAll('.jdy-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.cid === courseId)
+  );
+
+  jdy_loading(true);
+  [_students, _evals] = await Promise.all([
+    jdy_getCourseStudents(courseId),
+    jdy_getAllEvalsForCourse(courseId)
+  ]);
+  jdy_loading(false);
+
+  buildTable();
+  updateStats();
+}
+
+// ── 통계 ─────────────────────────────────────────────────
+function updateStats() {
+  const n   = _students.length;
+  const evN = _evals.length;
+  const maxPossible = n * (n > 0 ? n - 1 : 0);
+  const rate = maxPossible > 0 ? Math.round((evN / maxPossible) * 100) : 0;
+
+  let totalAvg = 0;
+  if (evN > 0) {
+    const sum = _evals.reduce((acc, e) => acc + parseFloat(jdy_avg(e)), 0);
+    totalAvg = (sum / evN).toFixed(2);
+  }
+
+  document.getElementById('s-students').textContent = n;
+  document.getElementById('s-evals').textContent    = evN;
+  document.getElementById('s-rate').textContent     = rate + '%';
+  document.getElementById('s-avg').textContent      = totalAvg || '-';
+}
+
+// ── 테이블 빌드 ───────────────────────────────────────────
+function buildTable() {
+  // 학생별 받은 평가 집계
+  const summary = {};
+  _students.forEach(s => {
+    summary[s.id] = { student: s, evals: [] };
+  });
+  _evals.forEach(e => {
+    if (summary[e.evaluatee_id]) {
+      summary[e.evaluatee_id].evals.push(e);
+    }
+  });
+
+  _filtered = Object.values(summary).map(({ student, evals }) => {
+    const avg = evals.length
+      ? (evals.reduce((a, e) => a + parseFloat(jdy_avg(e)), 0) / evals.length).toFixed(2)
+      : null;
+    const criteria = {};
+    CRITERIA.forEach(c => {
+      const vals = evals.map(e => e[c.key]).filter(v => v != null);
+      criteria[c.key] = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : null;
+    });
+    return { student, evals, avg, criteria };
+  });
+
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('students-tbody');
+  const q     = document.getElementById('search-input').value.trim().toLowerCase();
+  let rows    = _filtered;
+
+  if (q) {
+    rows = rows.filter(r =>
+      (r.student.full_name || '').toLowerCase().includes(q) ||
+      (r.student.student_id || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">데이터가 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const avg = r.avg ? parseFloat(r.avg) : null;
+    const chip = avg == null ? '-'
+      : `<span class="score-chip ${avg>=4?'score-high':avg>=3?'score-mid':'score-low'}">${avg}</span>`;
+
+    const cells = CRITERIA.map(c => {
+      const v = r.criteria[c.key];
+      return `<td>${v ? jdy_scoreBar(v) : '<span style="color:var(--text3)">-</span>'}</td>`;
+    }).join('');
+
+    return `<tr onclick="openDetail('${r.student.id}')">
+      <td style="font-weight:600">${r.student.full_name || '(미설정)'}</td>
+      <td style="color:var(--text2)">${r.student.student_id || '-'}</td>
+      <td><strong>${r.evals.length}</strong>건</td>
+      ${cells}
+      <td>${chip}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── 검색 / 정렬 ───────────────────────────────────────────
+function filterTable() { renderTable(); }
+
+function sortBy(field) {
+  _sortAsc = !_sortAsc;
+  _filtered.sort((a, b) => {
+    const av = parseFloat(a.avg) || 0;
+    const bv = parseFloat(b.avg) || 0;
+    return _sortAsc ? av - bv : bv - av;
+  });
+  renderTable();
+}
+
+// ── 학생 상세 모달 ────────────────────────────────────────
+function openDetail(studentId) {
+  const row = _filtered.find(r => r.student.id === studentId);
+  if (!row) return;
+
+  document.getElementById('detail-name').textContent = row.student.full_name || '(미설정)';
+  document.getElementById('detail-sid').textContent  = row.student.student_id ? `학번: ${row.student.student_id}` : '';
+  document.getElementById('detail-count').textContent = row.evals.length;
+
+  // 평균 점수 그리드
+  const scoresEl = document.getElementById('detail-scores');
+  if (row.evals.length) {
+    scoresEl.innerHTML = CRITERIA.map(c => {
+      const vals = row.evals.map(e => e[c.key]).filter(v => v != null);
+      const avg  = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '-';
+      return `<div class="detail-score"><div class="val">${avg}</div><div class="lbl">${c.label}</div></div>`;
+    }).join('') + `
+      <div class="detail-score" style="background:linear-gradient(135deg,#eff6ff,#dbeafe)">
+        <div class="val" style="color:var(--primary)">${row.avg || '-'}</div>
+        <div class="lbl">종합 평균</div>
+      </div>`;
+  } else {
+    scoresEl.innerHTML = '<p style="color:var(--text3);font-size:.875rem;">받은 평가가 없습니다.</p>';
+  }
+
+  // 개별 평가 목록
+  const evalsEl = document.getElementById('detail-evals');
+  if (!row.evals.length) {
+    evalsEl.innerHTML = '<div class="jdy-empty"><p>평가 내역이 없습니다.</p></div>';
+  } else {
+    evalsEl.innerHTML = row.evals.map((e, i) => `
+      <div class="eval-item">
+        <div class="eval-item-head">
+          <span>평가 #${i+1}</span>
+          <span>${jdy_fmtDate(e.submitted_at)}</span>
+          <span class="score-chip ${parseFloat(jdy_avg(e))>=4?'score-high':parseFloat(jdy_avg(e))>=3?'score-mid':'score-low'}">
+            평균 ${jdy_avg(e)}점
+          </span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${CRITERIA.map(c =>
+            `<span style="font-size:.75rem;background:var(--bg);border-radius:6px;padding:3px 8px;">
+              ${c.label} <strong>${e[c.key]}</strong>점
+            </span>`
+          ).join('')}
+        </div>
+        ${e.comment ? `<div class="eval-comment">${e.comment}</div>` : ''}
+      </div>`
+    ).join('');
+  }
+
+  document.getElementById('detail-modal').style.display = 'flex';
+}
+
+function closeDetail() {
+  document.getElementById('detail-modal').style.display = 'none';
+}
+
+// ── CSV 내보내기 ──────────────────────────────────────────
+function exportCSV() {
+  const course = _courses.find(c => c.id === _activeCid);
+  const header = ['이름','학번','받은평가수','참여도','책임감','협력도','소통능력','기여도','종합평균'];
+  const rows   = _filtered.map(r => [
+    r.student.full_name  || '',
+    r.student.student_id || '',
+    r.evals.length,
+    r.criteria.score_participation  || '',
+    r.criteria.score_responsibility || '',
+    r.criteria.score_cooperation    || '',
+    r.criteria.score_communication  || '',
+    r.criteria.score_contribution   || '',
+    r.avg || ''
+  ]);
+
+  const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+  const bom  = '\uFEFF'; // Excel UTF-8 BOM
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `동료평가_${course?.name || ''}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  jdy_toast('success', 'CSV 파일이 다운로드되었습니다.');
+}
+</script>
+</body>
+</html>
