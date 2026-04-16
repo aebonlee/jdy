@@ -35,3 +35,24 @@ CREATE POLICY "authenticated users can read profiles"
 ON public.jdy_profiles
 FOR SELECT
 USING (auth.role() = 'authenticated');
+
+-- ③ jdy_profiles: 본인 프로필 INSERT/UPDATE 허용
+--
+-- ⚠️  cross-table 재귀 주의: jdy_enrollments.jdy_e_instructor_select 가 jdy_profiles를 참조하므로
+--     jdy_p_classmate_select(jdy_enrollments 참조) 와 순환 발생 → jdy_e_instructor_select 제거 필요
+DROP POLICY IF EXISTS "jdy_e_instructor_select" ON public.jdy_enrollments;
+
+-- 본인 프로필 INSERT 허용
+DROP POLICY IF EXISTS "users can insert own profile" ON public.jdy_profiles;
+CREATE POLICY "users can insert own profile"
+ON public.jdy_profiles
+FOR INSERT
+WITH CHECK (id = auth.uid());
+
+-- 본인 프로필 UPDATE 허용
+DROP POLICY IF EXISTS "users can update own profile" ON public.jdy_profiles;
+CREATE POLICY "users can update own profile"
+ON public.jdy_profiles
+FOR UPDATE
+USING (id = auth.uid())
+WITH CHECK (id = auth.uid());
