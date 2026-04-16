@@ -95,6 +95,32 @@ img { max-width: 100%; }
   background: #eff6ff;
   color: var(--primary);
 }
+
+/* ── 분반 구분선 & 버튼 ─────────────────────────────────── */
+.jdy-nav-sec-divider {
+  display: inline-block;
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 4px;
+  vertical-align: middle;
+}
+.jdy-nav-sec-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border-radius: 100px;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .3px;
+  transition: all var(--transition);
+  border: 1.5px solid transparent;
+}
+.jdy-sec-Q1 { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.jdy-sec-Q2 { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.jdy-sec-Y2 { background: #faf5ff; color: #7c3aed; border-color: #ddd6fe; }
+.jdy-nav-sec-link:hover { filter: brightness(.92); transform: translateY(-1px); }
+
 .jdy-nav-user {
   display: flex;
   align-items: center;

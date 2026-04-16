@@ -58,13 +58,7 @@
                     동아방송대
                 </a>
                 <span class="nav-divider" aria-hidden="true"></span>
-                <div class="nav-auth-group">
-                    <button class="nav-auth-login" id="main-login-btn" onclick="openMainAuthModal()" style="display:none" aria-label="로그인">로그인</button>
-                    <div class="nav-auth-user" id="main-nav-user" style="display:none">
-                        <div class="nav-avatar" id="main-avatar">?</div>
-                        <span class="nav-username" id="main-username"></span>
-                    </div>
-                </div>
+                <button class="nav-auth-login" id="main-login-btn" onclick="openMainAuthModal()" style="display:none" aria-label="로그인">로그인</button>
                 <a href="#contact" class="btn btn-outline-small" data-i18n="nav.contact">상담 신청</a>
                 <div class="nav-toggles" style="margin-right:4px;">
                     <button class="lang-toggle" id="langToggle" aria-label="Switch to English">EN</button>
@@ -84,6 +78,10 @@
                             <button class="color-swatch" data-color="amber" title="앰버"><span style="background: linear-gradient(135deg, #92400e, #78350f);"></span></button>
                         </div>
                     </div>
+                </div>
+                <div class="nav-auth-user" id="main-nav-user" style="display:none">
+                    <div class="nav-avatar" id="main-avatar">?</div>
+                    <span class="nav-username" id="main-username"></span>
                 </div>
                 <button class="nav-main-logout" id="main-logout-btn" onclick="mainSignOut()" style="display:none" aria-label="로그아웃">로그아웃</button>
             </div>

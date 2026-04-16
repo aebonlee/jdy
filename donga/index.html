@@ -23,21 +23,22 @@
       <a href="index.html" class="jdy-nav-link active">강의 홈</a>
       <a href="eval.html"  class="jdy-nav-link" id="nav-eval">동료평가</a>
       <a href="dashboard.html" class="jdy-nav-link" id="nav-dash" style="display:none">대시보드</a>
-    </div>
-    <!-- 비로그인 상태 -->
-    <div id="nav-guest" class="jdy-nav-user" style="gap:8px;">
-      <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_openAuthModal('login')">
-        <i class="fa-solid fa-right-to-bracket"></i> 로그인
-      </button>
-      <button class="jdy-btn jdy-btn-primary jdy-btn-sm" onclick="jdy_openAuthModal('signup')">
-        <i class="fa-solid fa-user-plus"></i> 회원가입
-      </button>
+      <span class="jdy-nav-sec-divider"></span>
+      <a href="eval.html" class="jdy-nav-sec-link jdy-sec-Q1">Q1반</a>
+      <a href="eval.html" class="jdy-nav-sec-link jdy-sec-Q2">Q2반</a>
+      <a href="eval.html" class="jdy-nav-sec-link jdy-sec-Y2">Y2반</a>
     </div>
     <!-- 로그인 상태 -->
     <div id="nav-user" class="jdy-nav-user" style="display:none">
       <div class="jdy-avatar" id="nav-avatar">?</div>
       <span id="nav-name"></span>
       <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signOut()">로그아웃</button>
+    </div>
+    <!-- 비로그인: 로그인 단일 버튼 -->
+    <div id="nav-guest" style="display:none">
+      <button class="jdy-btn jdy-btn-primary jdy-btn-sm" onclick="jdy_openAuthModal('login')">
+        <i class="fa-solid fa-right-to-bracket"></i> 로그인
+      </button>
     </div>
   </div>
 </nav>
@@ -256,31 +257,35 @@ let _profile = null;
   sb.auth.onAuthStateChange(async (event, session) => {
     // 토큰 갱신은 UI 재렌더 불필요
     if (event === 'TOKEN_REFRESHED') return;
+    try {
+      _session = session;
 
-    _session = session;
-
-    if (session) {
-      _profile = await jdy_getProfile(session.user.id);
-
-      // 첫 OAuth 로그인 시 트리거가 아직 완료 안 됐을 수 있으므로 직접 생성
-      if (!_profile) {
-        const meta = session.user.user_metadata || {};
-        await jdy_upsertProfile({
-          full_name: meta.full_name || meta.name || session.user.email.split('@')[0]
-        });
+      if (session) {
         _profile = await jdy_getProfile(session.user.id);
+
+        // 첫 OAuth 로그인 시 트리거가 아직 완료 안 됐을 수 있으므로 직접 생성
+        if (!_profile) {
+          const meta = session.user.user_metadata || {};
+          await jdy_upsertProfile({
+            full_name: meta.full_name || meta.name || session.user.email.split('@')[0]
+          });
+          _profile = await jdy_getProfile(session.user.id);
+        }
+
+        if (_profile && !_profile.full_name) {
+          document.getElementById('profile-modal').style.display = 'flex';
+        }
+      } else {
+        _profile = null;
       }
 
-      if (_profile && !_profile.full_name) {
-        document.getElementById('profile-modal').style.display = 'flex';
-      }
-    } else {
-      _profile = null;
+      await loadCourses();
+      renderAuthSection();
+    } catch (err) {
+      console.error('[donga/index] 초기화 오류:', err);
+    } finally {
+      jdy_loading(false);
     }
-
-    await loadCourses();
-    renderAuthSection();
-    jdy_loading(false);
   });
 })();
 
