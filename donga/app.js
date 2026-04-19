@@ -521,10 +521,7 @@ function jdy_bindStars(container) {
 // ============================================================
 
 function jdy_avg(ev) {
-  const fields = ['score_participation','score_responsibility',
-                  'score_cooperation','score_communication','score_contribution'];
-  const vals = fields.map(f => ev[f]).filter(v => v != null);
-  return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '-';
+  return jdy_pitchTotal(ev);
 }
 
 function jdy_fmtDate(str) {
