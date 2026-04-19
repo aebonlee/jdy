@@ -47,8 +47,30 @@
       margin-top: 8px;
     }
     .export-btn { margin-left: auto; }
+    /* 클릭 가능한 테이블 행 */
+    #pitch-summary-tbody tr { cursor: pointer; transition: background .15s; }
+    #pitch-summary-tbody tr:hover { background: var(--surface2); }
+    .detail-arrow { color: var(--text3); font-size: .8rem; transition: color .15s; }
+    #pitch-summary-tbody tr:hover .detail-arrow { color: var(--primary); }
+    /* 상세 모달 점수 카드 */
+    .pd-score-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .pd-score-card {
+      background: var(--surface2); border-radius: 10px; padding: 14px 10px; text-align: center;
+      border: 1px solid var(--border);
+    }
+    .pd-score-card .pd-val { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
+    .pd-score-card .pd-max { font-size: .7rem; color: var(--text3); font-weight: 400; }
+    .pd-score-card .pd-label { font-size: .7rem; color: var(--text2); margin-top: 4px; }
+    .pd-gauge { height: 5px; background: var(--border); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+    .pd-gauge-fill { height: 100%; border-radius: 3px; background: var(--primary); transition: width .4s ease; }
+    .pd-total-card {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-color: #93c5fd;
+    }
+    .pd-total-card .pd-val { font-size: 1.8rem; }
     @media (max-width:600px) {
       .detail-grid { grid-template-columns: repeat(3,1fr); }
+      .pd-score-cards { grid-template-columns: repeat(3,1fr); }
     }
   </style>
 </head>
@@ -376,6 +398,7 @@ function buildPitchTable() {
     <th onclick="pitchSortBy()" style="cursor:pointer;color:var(--primary);">
       평균총점 ↕<br><small style="color:var(--text3)">(100)</small>
     </th>
+    <th style="width:48px"></th>
   </tr>`;
 
   // roster 기반: evaluatee_sid로 그룹핑
@@ -401,7 +424,7 @@ function buildPitchTable() {
 function renderPitchTable() {
   const tbody = document.getElementById('pitch-summary-tbody');
   if (!_pitchRows.length) {
-    const cols = 12 + (_isAllView ? 1 : 0);
+    const cols = 13 + (_isAllView ? 1 : 0);
     tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:40px;color:var(--text3)">데이터가 없습니다.</td></tr>`;
     return;
   }
@@ -426,6 +449,7 @@ function renderPitchTable() {
       <td style="text-align:center"><strong>${r.evals.length}</strong>건</td>
       ${cells}
       <td style="text-align:center">${chip}</td>
+      <td style="text-align:center"><span class="detail-arrow"><i class="fa-solid fa-chevron-right"></i></span></td>
     </tr>`;
   }).join('');
 }
@@ -455,6 +479,25 @@ function openPitchDetail(studentSid) {
     return;
   }
 
+  // 항목별 평균 점수 카드 + 총점 카드
+  const scoreCards = JDY_PITCH_CRITERIA.map(c => {
+    const vals = row.evals.map(e => e[c.col]).filter(v => v != null);
+    const avg  = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+    const pct  = Math.round((avg / c.max) * 100);
+    return `<div class="pd-score-card">
+      <div class="pd-val">${avg ? avg.toFixed(1) : '-'}<span class="pd-max">/${c.max}</span></div>
+      <div class="pd-gauge"><div class="pd-gauge-fill" style="width:${pct}%"></div></div>
+      <div class="pd-label">${c.label}</div>
+    </div>`;
+  }).join('');
+
+  const totalCard = `<div class="pd-score-card pd-total-card">
+    <div class="pd-val">${row.avgTotal}<span class="pd-max">/100</span></div>
+    <div class="pd-gauge"><div class="pd-gauge-fill" style="width:${row.avgTotal}%;background:#2563eb"></div></div>
+    <div class="pd-label">평균 총점</div>
+  </div>`;
+
+  // 개별 평가 테이블
   const crHeaders = JDY_PITCH_CRITERIA.map(c =>
     `<th style="white-space:nowrap;font-size:.75rem">${c.label}<br><small style="color:var(--primary)">(${c.max})</small></th>`
   ).join('');
@@ -475,10 +518,14 @@ function openPitchDetail(studentSid) {
   }).join('');
 
   body.innerHTML = `
-    <p style="font-size:.8rem;color:var(--text2);margin-bottom:12px">
-      총 <strong>${row.evals.length}</strong>건 평가 수신 · 평균 총점
-      <strong style="color:var(--primary)">${row.avgTotal}</strong>점
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:16px">
+      총 <strong>${row.evals.length}</strong>건 평가 수신
     </p>
+    <div class="pd-score-cards">
+      ${totalCard}
+      ${scoreCards}
+    </div>
+    <h4 style="font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--text)">개별 평가 내역 (평가자 익명)</h4>
     <div style="overflow-x:auto">
       <table class="jdy-table" style="min-width:600px">
         <thead><tr><th>구분</th>${crHeaders}
