@@ -78,6 +78,10 @@
                     <div class="nav-avatar" id="main-avatar">?</div>
                     <span class="nav-username" id="main-username"></span>
                 </div>
+                <a href="donga/dashboard.html" id="main-dash-link" class="nav-donga-pill" style="display:none;background:#ef4444;margin-right:6px;">
+                    <i class="fa-solid fa-gauge-high" style="font-size:12px;"></i>
+                    대시보드
+                </a>
                 <button class="nav-main-logout" id="main-logout-btn" onclick="mainSignOut()" style="display:none" aria-label="로그아웃">로그아웃</button>
                 <span class="nav-divider" aria-hidden="true"></span>
                 <a href="donga/index.html" class="nav-donga-pill" data-i18n="nav.donga">
@@ -682,14 +686,23 @@
           loginBtn.style.display  = 'none';
           navUser.style.display   = 'flex';
           logoutBtn.style.display = 'inline-flex';
-          const meta = session.user.user_metadata || {};
-          const name = meta.full_name || meta.name || session.user.email.split('@')[0];
+          const meta  = session.user.user_metadata || {};
+          const email = session.user.email || '';
+          const name  = meta.full_name || meta.name || (email ? email.split('@')[0] : '');
           avatar.textContent   = name.charAt(0).toUpperCase();
           username.textContent = name;
+
+          // 관리자: 대시보드 링크 표시
+          const dashLink = document.getElementById('main-dash-link');
+          if (email === 'radica8566@gmail.com' && dashLink) {
+            dashLink.style.display = 'inline-flex';
+          }
         } else {
           loginBtn.style.display  = 'inline-flex';
           navUser.style.display   = 'none';
           logoutBtn.style.display = 'none';
+          const dashLink = document.getElementById('main-dash-link');
+          if (dashLink) dashLink.style.display = 'none';
         }
       });
 
@@ -701,11 +714,11 @@
       };
       window.mainSignInGoogle = function() {
         sbMain.auth.signInWithOAuth({ provider: 'google',
-          options: { redirectTo: location.origin + '/donga/index.html' } });
+          options: { redirectTo: location.origin + location.pathname } });
       };
       window.mainSignInKakao = function() {
         sbMain.auth.signInWithOAuth({ provider: 'kakao',
-          options: { redirectTo: location.origin + '/donga/index.html' } });
+          options: { redirectTo: location.origin + location.pathname } });
       };
       window.mainSignOut = function() {
         sbMain.auth.signOut();
