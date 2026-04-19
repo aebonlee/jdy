@@ -415,13 +415,6 @@ async function _handleSession(session) {
 
   jdy_toggleNavAuth(true, _profile);
 
-  // 프로필 미완성 → 모달 즉시 표시
-  if (!_profile?.full_name || !_profile?.student_id || !_profile?.section) {
-    showView('eval');
-    document.getElementById('profile-modal').style.display = 'flex';
-    return;
-  }
-
   // 교수자 → 대시보드 이동 (단, ?section= 파라미터가 있으면 열람 뷰)
   const urlSection = new URLSearchParams(location.search).get('section');
   if (_profile.role === 'instructor') {
@@ -429,6 +422,13 @@ async function _handleSession(session) {
     // 교수자는 분반 링크 표시, 열람 모드
     document.getElementById('nav-dash').style.display = 'inline-block';
     await initEvalView(urlSection);
+    return;
+  }
+
+  // 프로필 미완성 → 모달 즉시 표시 (학생 전용)
+  if (!_profile?.full_name || !_profile?.student_id || !_profile?.section) {
+    showView('eval');
+    document.getElementById('profile-modal').style.display = 'flex';
     return;
   }
 
