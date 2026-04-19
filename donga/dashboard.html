@@ -90,6 +90,7 @@
       <a href="index.html?section=Q1" class="jdy-nav-sec-link jdy-sec-Q1">Q1반</a>
       <a href="index.html?section=Q2" class="jdy-nav-sec-link jdy-sec-Q2">Q2반</a>
       <a href="index.html?section=Y2" class="jdy-nav-sec-link jdy-sec-Y2">Y2반</a>
+      <a href="index.html?section=RA" class="jdy-nav-sec-link jdy-sec-RA">독서A</a>
     </div>
     <!-- 로그인 상태 -->
     <div id="nav-user" class="jdy-nav-user">
@@ -317,7 +318,7 @@ async function loadSectionData(secOrId) {
 
   if (secOrId === 'all') {
     _students = [];
-    ['Q1','Q2','Y2'].forEach(sec => {
+    ['Q1','Q2','Y2','RA'].forEach(sec => {
       const list = _rosterAll[sec] || [];
       list.forEach(r => {
         _students.push({ sid: r.sid, name: r.name, no: r.no, section: sec });
@@ -325,7 +326,7 @@ async function loadSectionData(secOrId) {
       });
     });
     _isAllView = true;
-  } else if (['Q1','Q2','Y2'].includes(secOrId)) {
+  } else if (['Q1','Q2','Y2','RA'].includes(secOrId)) {
     const list = _rosterAll[secOrId] || [];
     _students = list.map(r => ({ sid: r.sid, name: r.name, no: r.no, section: secOrId }));
     _isAllView = false;
@@ -344,7 +345,7 @@ async function loadPitchDashData() {
 
   if (_isAllView) {
     _pitchEvals = await jdy_getMultiCoursePitchEvals(_courses.map(c => c.id));
-  } else if (['Q1','Q2','Y2'].includes(_activeSec)) {
+  } else if (['Q1','Q2','Y2','RA'].includes(_activeSec)) {
     const course = _courses.find(c => c.section === _activeSec);
     _pitchEvals = course ? await jdy_getAllPitchEvalsForCourse(course.id) : [];
   } else {

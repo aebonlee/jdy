@@ -119,6 +119,7 @@ img { max-width: 100%; }
 .jdy-sec-Q1 { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 .jdy-sec-Q2 { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
 .jdy-sec-Y2 { background: #faf5ff; color: #7c3aed; border-color: #ddd6fe; }
+.jdy-sec-RA { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
 .jdy-nav-sec-link:hover { filter: brightness(.92); transform: translateY(-1px); }
 
 .jdy-nav-user {
@@ -339,15 +340,18 @@ img { max-width: 100%; }
 .jdy-section-Q1 { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .jdy-section-Q2 { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 .jdy-section-Y2 { background: #faf5ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.jdy-section-RA { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
 
 /* 대시보드 분반 탭 배지 */
 .jdy-sec-tab-Q1 { --tab-color: #1d4ed8; }
 .jdy-sec-tab-Q2 { --tab-color: #15803d; }
 .jdy-sec-tab-Y2 { --tab-color: #7c3aed; }
+.jdy-sec-tab-RA { --tab-color: #b45309; }
 .jdy-sec-tab-all { --tab-color: #64748b; }
 .jdy-tab.jdy-sec-tab-Q1.active  { color: #1d4ed8; border-color: #1d4ed8; }
 .jdy-tab.jdy-sec-tab-Q2.active  { color: #15803d; border-color: #15803d; }
 .jdy-tab.jdy-sec-tab-Y2.active  { color: #7c3aed; border-color: #7c3aed; }
+.jdy-tab.jdy-sec-tab-RA.active  { color: #b45309; border-color: #b45309; }
 
 /* 테이블 내 분반 셀 */
 td.cell-sec { white-space: nowrap; }
