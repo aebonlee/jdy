@@ -173,9 +173,9 @@
       <a href="index.html" class="jdy-nav-link active">강의 홈</a>
       <a href="dashboard.html" class="jdy-nav-link" id="nav-dash" style="display:none">대시보드</a>
       <span class="jdy-nav-sec-divider"></span>
-      <a href="index.html" class="jdy-nav-sec-link jdy-sec-Q1">Q1반</a>
-      <a href="index.html" class="jdy-nav-sec-link jdy-sec-Q2">Q2반</a>
-      <a href="index.html" class="jdy-nav-sec-link jdy-sec-Y2">Y2반</a>
+      <a href="index.html?section=Q1" class="jdy-nav-sec-link jdy-sec-Q1">Q1반</a>
+      <a href="index.html?section=Q2" class="jdy-nav-sec-link jdy-sec-Q2">Q2반</a>
+      <a href="index.html?section=Y2" class="jdy-nav-sec-link jdy-sec-Y2">Y2반</a>
     </div>
     <!-- 로그인 상태 -->
     <div id="nav-user" class="jdy-nav-user" style="display:none">
@@ -262,7 +262,6 @@
               <div style="font-weight:700;font-size:1rem;">발표평가 입력</div>
               <div style="font-size:.8rem;color:var(--text2);margin-top:2px;">각 항목의 배점에 맞게 점수를 입력하세요 (총 100점)</div>
             </div>
-            <span id="draft-status" style="font-size:.78rem;color:var(--text3);margin-left:auto;"></span>
           </div>
           <div class="eva-wrap">
             <table class="jdy-table" id="eval-table" style="min-width:960px;border-radius:0;">
@@ -342,9 +341,6 @@
 
 <!-- ── 고정 하단 액션바 ───────────────────────────────────── -->
 <div class="eva-actions" id="eval-actions" style="display:none">
-  <button class="jdy-btn jdy-btn-secondary" onclick="saveDraft()">
-    <i class="fa-solid fa-floppy-disk"></i> 임시저장
-  </button>
   <button class="jdy-btn jdy-btn-primary" onclick="submitAllEvals()">
     <i class="fa-solid fa-paper-plane"></i> 최종 제출
   </button>
@@ -366,7 +362,6 @@ let _course      = null;
 let _members     = [];   // 분반 동료 (본인 제외)
 let _roster      = [];   // 출석부 명단 [{no, sid, name}, ...]
 let _myEvals     = {};   // evaluatee_id → eval row
-let _autoSaveTimer = null;
 
 // 발표평가 항목 (app.js JDY_PITCH_CRITERIA 재사용)
 const CRITERIA = JDY_PITCH_CRITERIA.map(c => ({ name: c.col, label: c.label, max: c.max }));
@@ -431,14 +426,15 @@ async function _handleSession(session) {
     return;
   }
 
-  // 교수자 → 대시보드 이동
-  if (_profile.role === 'instructor') {
+  // 교수자 → 대시보드 이동 (단, ?section= 파라미터가 있으면 평가 뷰 표시)
+  const urlSection = new URLSearchParams(location.search).get('section');
+  if (_profile.role === 'instructor' && !urlSection) {
     location.href = 'dashboard.html';
     return;
   }
 
-  // 학생 → 평가 뷰 초기화
-  await initEvalView();
+  // 평가 뷰 초기화 (URL 분반 우선, 없으면 프로필 분반)
+  await initEvalView(urlSection || _profile.section);
 }
 
 // ── 뷰 전환 ─────────────────────────────────────────────────
@@ -454,18 +450,22 @@ function showView(which) {
 //   ③ coursePromise 완료 즉시 evalsPromise 시작 (membersPromise와 겹침)
 //   ④ Promise.all([membersPromise, evalsPromise]) 대기 → 렌더
 // 결과: 기존 3단계(course+members → evals) 대신 2단계로 단축
-async function initEvalView() {
+async function initEvalView(section) {
   showView('eval');
 
-  const userId  = _session.user.id;
-  const section = _profile.section;
+  const userId = _session.user.id;
 
   updateHeader(null, section);
 
+  // 현재 분반 nav 링크 활성화
+  document.querySelectorAll('.jdy-nav-sec-link').forEach(a => {
+    a.classList.toggle('active', a.href.includes('section=' + section));
+  });
+
   // ① roster.json + 강의 + 분반 멤버 동시 시작
-  const rosterPromise   = fetch('roster.json').then(r => r.json()).catch(() => ({}));
-  const coursePromise    = jdy_getActiveCourseBySection(section);
-  const membersPromise   = jdy_getSectionMembers(section, userId);
+  const rosterPromise  = fetch('roster.json').then(r => r.json()).catch(() => ({}));
+  const coursePromise   = jdy_getActiveCourseBySection(section);
+  const membersPromise  = jdy_getSectionMembers(section, userId);
 
   const [rosterAll, course, members] = await Promise.all([rosterPromise, coursePromise, membersPromise]);
 
@@ -485,20 +485,12 @@ async function initEvalView() {
 
   updateHeader(_course, section);
 
-  // ② 평가 조회
+  // ② 평가 조회 (Supabase)
   const evals = await jdy_getMyPitchEvals(_course.id, userId);
   _myEvals = {};
   evals.forEach(e => { _myEvals[e.evaluatee_id] = e; });
 
-  // localStorage 초안 로드
-  const draftKey = `jdy_eval_${userId}_${_course.id}`;
-  let draft = {};
-  try {
-    const raw = localStorage.getItem(draftKey);
-    if (raw) draft = JSON.parse(raw);
-  } catch (_) {}
-
-  renderEvalTable(draft);
+  renderEvalTable();
   updateProgress();
 
   // 모두 완료된 경우 → 배너
@@ -524,7 +516,7 @@ function updateHeader(course, section) {
 }
 
 // ── 평가 테이블 렌더 ─────────────────────────────────────────
-function renderEvalTable(draft = {}) {
+function renderEvalTable() {
   const tbody = document.getElementById('eval-tbody');
 
   if (!_roster.length) {
@@ -544,7 +536,6 @@ function renderEvalTable(draft = {}) {
     const dbUser    = sidToProfile[r.sid];        // DB 등록된 학생
     const uid       = dbUser ? dbUser.id : null;
     const existing  = uid ? _myEvals[uid] : null;
-    const draftRow  = uid ? (draft[uid] || {}) : {};
     const submitted = !!existing;
     const registered = !!dbUser;
 
@@ -553,9 +544,7 @@ function renderEvalTable(draft = {}) {
       if (!registered) {
         return `<td style="text-align:center;"><input type="number" class="score-input" value="" disabled placeholder="-" style="opacity:.4"></td>`;
       }
-      const val = submitted
-        ? (existing[c.name] ?? '')
-        : (draftRow[c.name] ?? '');
+      const val = submitted ? (existing[c.name] ?? '') : '';
       const cls = (val !== '' && val != null) ? ' filled' : '';
 
       if (submitted) {
@@ -570,8 +559,7 @@ function renderEvalTable(draft = {}) {
 
     // 총점 셀
     const totalVal = !registered ? '-'
-      : submitted ? computeTotal(existing)
-      : computeDraftTotal(draftRow);
+      : submitted ? computeTotal(existing) : '-';
     const totalCell = `<td style="text-align:center;font-weight:600;color:var(--primary);" ${uid ? `id="avg-${uid}"` : ''}>${totalVal}</td>`;
 
     // 상태 셀
@@ -598,11 +586,7 @@ function computeTotal(ev) {
   return vals.reduce((a, b) => a + Number(b), 0);
 }
 
-function computeDraftTotal(draftRow) {
-  const vals = CRITERIA.map(c => draftRow[c.name]).filter(v => v != null && v !== '');
-  if (!vals.length) return '-';
-  return vals.reduce((a, b) => a + Number(b), 0);
-}
+
 
 // ── 점수 입력 핸들러 ─────────────────────────────────────────
 function onScoreInput(input) {
@@ -612,7 +596,6 @@ function onScoreInput(input) {
   if (input.value !== '' && v < 0)      { input.value = 0; v = 0; }
   input.classList.toggle('filled', input.value !== '');
   updateRowTotal(input.dataset.uid);
-  scheduleAutoSave();
 }
 
 function updateRowTotal(uid) {
@@ -641,51 +624,6 @@ function updateProgress() {
   if (el('prog-done'))  el('prog-done').textContent  = done;
   if (el('prog-total')) el('prog-total').textContent = total;
   if (el('prog-fill'))  el('prog-fill').style.width  = pct + '%';
-}
-
-// ── 초안 수집 ────────────────────────────────────────────────
-function getDraftData() {
-  const draft = {};
-  document.querySelectorAll('#eval-tbody tr[data-uid]').forEach(row => {
-    const uid = row.dataset.uid;
-    if (_myEvals[uid]) return; // 이미 제출됨, 건너뜀
-    const rowData = {};
-    row.querySelectorAll('.score-input[data-col]').forEach(inp => {
-      if (inp.value !== '') rowData[inp.dataset.col] = inp.value;
-    });
-    if (Object.keys(rowData).length) draft[uid] = rowData;
-  });
-  return draft;
-}
-
-// ── 자동저장 스케줄 (800ms 디바운스) ────────────────────────
-function scheduleAutoSave() {
-  clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(() => {
-    if (!_session || !_course) return;
-    const draftKey = `jdy_eval_${_session.user.id}_${_course.id}`;
-    try {
-      localStorage.setItem(draftKey, JSON.stringify(getDraftData()));
-      const statusEl = document.getElementById('draft-status');
-      if (statusEl) {
-        statusEl.textContent = `자동저장 ${new Date().toLocaleTimeString('ko-KR')}`;
-      }
-    } catch (_) {}
-  }, 800);
-}
-
-// ── 임시저장 버튼 ────────────────────────────────────────────
-function saveDraft() {
-  if (!_session || !_course) return;
-  const draftKey = `jdy_eval_${_session.user.id}_${_course.id}`;
-  try {
-    localStorage.setItem(draftKey, JSON.stringify(getDraftData()));
-    jdy_toast('success', '💾 임시저장 완료!');
-    const statusEl = document.getElementById('draft-status');
-    if (statusEl) statusEl.textContent = `저장됨 ${new Date().toLocaleTimeString('ko-KR')}`;
-  } catch (e) {
-    jdy_toast('error', '임시저장 실패: ' + e.message);
-  }
 }
 
 // ── 최종 제출 ────────────────────────────────────────────────
@@ -751,10 +689,6 @@ async function submitAllEvals() {
     return;
   }
 
-  // 로컬 초안 삭제
-  const draftKey = `jdy_eval_${session.user.id}_${_course.id}`;
-  try { localStorage.removeItem(draftKey); } catch (_) {}
-
   // 평가 캐시 갱신
   const freshEvals = await jdy_getMyPitchEvals(_course.id, session.user.id);
   _myEvals = {};
@@ -763,7 +697,7 @@ async function submitAllEvals() {
   jdy_loading(false);
 
   jdy_toast('success', `✅ ${batch.length}명 발표평가 제출 완료!`);
-  renderEvalTable({});
+  renderEvalTable();
   updateProgress();
   showSubmittedBanner();
 }
