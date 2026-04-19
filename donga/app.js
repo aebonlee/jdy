@@ -1,7 +1,7 @@
 'use strict';
 
 // ============================================================
-// 동아방송대 동료평가 시스템 - 공유 유틸리티
+// 동아방송대 발표평가 시스템 - 공유 유틸리티
 // ⚠️  anon key만 클라이언트에서 사용 (service role key는 서버 전용)
 // ============================================================
 
@@ -125,42 +125,6 @@ async function jdy_unenroll(courseId) {
   return { error };
 }
 
-// ============================================================
-// Peer Evaluations
-// ============================================================
-
-async function jdy_getClassmates(courseId, myId) {
-  const { data, error } = await sb
-    .from('jdy_enrollments')
-    .select('student:jdy_profiles(id, full_name, student_id)')
-    .eq('course_id', courseId)
-    .neq('student_id', myId);
-  if (error) { console.error('getClassmates:', error); return []; }
-  return (data || []).map(r => r.student).filter(Boolean);
-}
-
-async function jdy_getMyEvals(courseId, myId) {
-  const { data, error } = await sb
-    .from('jdy_peer_evaluations')
-    .select('*')
-    .eq('course_id', courseId)
-    .eq('evaluator_id', myId);
-  if (error) { console.error('getMyEvals:', error); return []; }
-  return data || [];
-}
-
-async function jdy_submitEval(payload) {
-  // payload: { evaluatee_id, course_id, score_*, comment }
-  const session = await jdy_getSession();
-  if (!session) return { error: '로그인이 필요합니다.' };
-
-  const body = { ...payload, evaluator_id: session.user.id };
-  const { error } = await sb
-    .from('jdy_peer_evaluations')
-    .upsert(body, { onConflict: 'evaluator_id,evaluatee_id,course_id' });
-  return { error };
-}
-
 // Dashboard: 교수자 전용 ──────────────────────────────────
 async function jdy_getCourseStudents(courseId) {
   const { data, error } = await sb
@@ -169,19 +133,6 @@ async function jdy_getCourseStudents(courseId) {
     .eq('course_id', courseId);
   if (error) { console.error('getCourseStudents:', error); return []; }
   return (data || []).map(r => r.student).filter(Boolean);
-}
-
-async function jdy_getAllEvalsForCourse(courseId) {
-  const { data, error } = await sb
-    .from('jdy_peer_evaluations')
-    .select(`
-      *,
-      evaluator:jdy_profiles!evaluator_id(full_name),
-      evaluatee:jdy_profiles!evaluatee_id(full_name, student_id)
-    `)
-    .eq('course_id', courseId);
-  if (error) { console.error('getAllEvals:', error); return []; }
-  return data || [];
 }
 
 // ============================================================
@@ -282,7 +233,7 @@ function jdy_openAuthModal(mode = 'login') {
   const title   = isLogin ? '로그인' : '회원가입';
   const desc    = isLogin
     ? '소셜 계정으로 간편하게 로그인하세요.'
-    : '계정을 만들고 동료평가에 참여하세요.<br>가입과 동시에 바로 이용 가능합니다.';
+    : '계정을 만들고 발표평가에 참여하세요.<br>가입과 동시에 바로 이용 가능합니다.';
 
   const overlay = document.createElement('div');
   overlay.id        = 'jdy-auth-popup';
@@ -361,24 +312,6 @@ async function jdy_getMultiCourseStudents(courses) {
 }
 
 /**
- * 여러 강의의 동료평가를 한 번에 조회
- * @param {string[]} courseIds
- */
-async function jdy_getMultiCourseEvals(courseIds) {
-  if (!courseIds.length) return [];
-  const { data, error } = await sb
-    .from('jdy_peer_evaluations')
-    .select(`
-      *,
-      evaluator:jdy_profiles!evaluator_id(full_name),
-      evaluatee:jdy_profiles!evaluatee_id(full_name, student_id)
-    `)
-    .in('course_id', courseIds);
-  if (error) { console.error('getMultiCourseEvals:', error); return []; }
-  return data || [];
-}
-
-/**
  * 여러 강의의 발표평가를 한 번에 조회
  * @param {string[]} courseIds
  */
@@ -429,16 +362,6 @@ async function jdy_getSectionMembers(section, excludeId = null) {
   return data || [];
 }
 
-/** 분반 전체 평가 집계용 조회 (evaluatee_id + 5개 점수만, 평가자 익명) */
-async function jdy_getSectionAllEvals(courseId) {
-  const { data, error } = await sb
-    .from('jdy_peer_evaluations')
-    .select('evaluatee_id,score_participation,score_responsibility,score_cooperation,score_communication,score_contribution')
-    .eq('course_id', courseId);
-  if (error) { console.error('getSectionAllEvals:', error); return []; }
-  return data || [];
-}
-
 /** 분반 전체 발표평가 집계용 조회 (evaluatee_id + 7개 점수만, 평가자 익명) */
 async function jdy_getSectionAllPitchEvals(courseId) {
   const cols = ['evaluatee_id', ...JDY_PITCH_CRITERIA.map(c => c.col)].join(',');
@@ -469,68 +392,12 @@ function jdy_loading(show) {
 }
 
 // ============================================================
-// Star Rating (JavaScript 기반)
-// ============================================================
-
-/**
- * 별점 입력 위젯 HTML 문자열 반환
- * @param {string} name  - input name 속성
- * @param {string} label - 표시 레이블
- * @param {number} value - 초기값 (0 = 미선택)
- */
-function jdy_starRatingHTML(name, label, value = 0) {
-  const stars = [1, 2, 3, 4, 5].map(i => `
-    <span class="jdy-star${i <= value ? ' on' : ''}" data-v="${i}" role="button" tabindex="0" aria-label="${i}점">★</span>
-  `).join('');
-  return `
-    <div class="jdy-rating-row">
-      <span class="jdy-rating-label">${label}</span>
-      <div class="jdy-stars" data-name="${name}" role="radiogroup" aria-label="${label}">
-        ${stars}
-        <input type="hidden" name="${name}" value="${value}" data-req>
-      </div>
-    </div>`;
-}
-
-/**
- * 별점 위젯 이벤트 바인딩 (DOM 삽입 후 호출)
- */
-function jdy_bindStars(container) {
-  container.querySelectorAll('.jdy-stars').forEach(group => {
-    const stars  = group.querySelectorAll('.jdy-star');
-    const hidden = group.querySelector('input[type="hidden"]');
-
-    const paint = val => stars.forEach(s => s.classList.toggle('on', +s.dataset.v <= val));
-
-    stars.forEach(star => {
-      star.addEventListener('mouseover', () => paint(+star.dataset.v));
-      star.addEventListener('mouseout',  () => paint(+(hidden.value || 0)));
-      star.addEventListener('click', () => {
-        hidden.value = star.dataset.v;
-        paint(+star.dataset.v);
-      });
-      star.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { star.click(); e.preventDefault(); }
-      });
-    });
-  });
-}
-
-// ============================================================
 // Helpers
 // ============================================================
-
-function jdy_avg(ev) {
-  return jdy_pitchTotal(ev);
-}
 
 function jdy_fmtDate(str) {
   if (!str) return '-';
   return new Date(str).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
 }
 
-function jdy_scoreBar(val, max = 5) {
-  const pct = Math.round((val / max) * 100);
-  const color = val >= 4 ? '#22c55e' : val >= 3 ? '#f59e0b' : '#ef4444';
-  return `<div class="jdy-bar-wrap"><div class="jdy-bar" style="width:${pct}%;background:${color}"></div><span>${val}</span></div>`;
-}
+
