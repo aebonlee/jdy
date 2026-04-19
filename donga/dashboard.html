@@ -243,7 +243,7 @@ let _studentSection = {}; // sid -> section label
       jdy_toggleNavAuth(true, _profile);
 
       const allCourses = await jdy_getCourses(false);
-      _courses = allCourses.filter(c => c.instructor_id === _session.user.id);
+      _courses = allCourses.filter(c => c.is_active);
 
       // roster.json 로드
       _rosterAll = await fetch('roster.json').then(r => r.json()).catch(() => ({}));
