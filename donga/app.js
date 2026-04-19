@@ -439,6 +439,17 @@ async function jdy_getSectionAllEvals(courseId) {
   return data || [];
 }
 
+/** 분반 전체 발표평가 집계용 조회 (evaluatee_id + 7개 점수만, 평가자 익명) */
+async function jdy_getSectionAllPitchEvals(courseId) {
+  const cols = ['evaluatee_id', ...JDY_PITCH_CRITERIA.map(c => c.col)].join(',');
+  const { data, error } = await sb
+    .from('jdy_pitch_evaluations')
+    .select(cols)
+    .eq('course_id', courseId);
+  if (error) { console.error('getSectionAllPitchEvals:', error); return []; }
+  return data || [];
+}
+
 // ============================================================
 // UI Utilities
 // ============================================================

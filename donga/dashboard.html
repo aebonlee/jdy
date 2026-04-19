@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>동료평가 대시보드 | 동아방송대</title>
+  <title>발표평가 대시보드 | 동아방송대</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="style.css">
@@ -18,7 +18,7 @@
     .score-high   { background: #dcfce7; color: #15803d; }
     .score-mid    { background: #fef9c3; color: #854d0e; }
     .score-low    { background: #fee2e2; color: #b91c1c; }
-    .detail-grid  { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 16px 0; }
+    .detail-grid  { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 12px; margin: 16px 0; }
     .detail-score { background: var(--bg); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
     .detail-score .val  { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
     .detail-score .lbl  { font-size: .7rem; color: var(--text2); margin-top: 2px; }
@@ -87,87 +87,31 @@
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:12px;">
         <div>
           <div class="jdy-sub-label">DASHBOARD</div>
-          <h2 style="font-size:1.8rem;font-weight:800;">동료평가 대시보드</h2>
+          <h2 style="font-size:1.8rem;font-weight:800;">발표평가 대시보드</h2>
         </div>
-        <button class="jdy-btn jdy-btn-secondary" onclick="exportCSV()">
+        <button class="jdy-btn jdy-btn-secondary" onclick="exportPitchCSV()">
           <i class="fa-solid fa-download"></i> CSV 내보내기
         </button>
       </div>
 
-      <!-- 통계 카드 -->
+      <!-- 통계 카드 (발표평가 통합) -->
       <div class="jdy-grid-4" id="stat-cards" style="margin-bottom:32px;">
-        <div class="jdy-stat-card"><div class="jdy-stat-icon">👥</div><div class="jdy-stat-val" id="s-students">-</div><div class="jdy-stat-label">전체 수강생</div></div>
-        <div class="jdy-stat-card"><div class="jdy-stat-icon">📝</div><div class="jdy-stat-val" id="s-evals">-</div><div class="jdy-stat-label">제출된 평가</div></div>
-        <div class="jdy-stat-card"><div class="jdy-stat-icon">📊</div><div class="jdy-stat-val" id="s-rate">-</div><div class="jdy-stat-label">평가 완료율</div></div>
-        <div class="jdy-stat-card"><div class="jdy-stat-icon">⭐</div><div class="jdy-stat-val" id="s-avg">-</div><div class="jdy-stat-label">전체 평균</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">👥</div><div class="jdy-stat-val" id="ps-students">-</div><div class="jdy-stat-label">전체 수강생</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">📋</div><div class="jdy-stat-val" id="ps-evals">-</div><div class="jdy-stat-label">제출된 평가</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">📊</div><div class="jdy-stat-val" id="ps-rate">-</div><div class="jdy-stat-label">평가 완료율</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">🏆</div><div class="jdy-stat-val" id="ps-avg">-</div><div class="jdy-stat-label">평균 총점</div></div>
       </div>
 
       <!-- 분반 탭 (전체/Q1/Q2/Y2) -->
       <div class="jdy-tabs" id="section-tabs" style="margin-bottom:16px;"></div>
 
-      <!-- 대시보드 유형 탭 -->
-      <div class="jdy-tabs" id="dash-type-tabs"
-           style="border-bottom:none;margin-bottom:20px;gap:6px;">
-        <button class="jdy-tab active" data-dtype="peer" onclick="switchDashType('peer')">
-          <i class="fa-solid fa-star-half-stroke"></i> 동료평가 (별점)
-        </button>
-        <button class="jdy-tab" data-dtype="pitch" onclick="switchDashType('pitch')">
-          <i class="fa-solid fa-table-list"></i> 발표평가 (점수표)
-        </button>
-      </div>
-
-      <!-- ── 동료평가 영역 ── -->
-      <div id="peer-dash-area">
-      <!-- 학생 테이블 -->
-      <div class="jdy-card" style="padding:0;overflow:hidden;">
-        <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);">
-          <h3 style="font-size:1rem;font-weight:700;margin:0;">학생별 평가 현황</h3>
-          <input class="jdy-input" type="text" id="search-input"
-                 placeholder="이름 또는 학번 검색..."
-                 oninput="filterTable()"
-                 style="max-width:220px;margin-left:auto;">
-        </div>
-        <div class="jdy-table-wrap">
-          <table class="jdy-table">
-            <thead id="students-thead">
-              <tr>
-                <th>이름</th>
-                <th>학번</th>
-                <th>받은 평가</th>
-                <th>참여도</th>
-                <th>책임감</th>
-                <th>협력도</th>
-                <th>소통능력</th>
-                <th>기여도</th>
-                <th onclick="sortBy('avg')" style="cursor:pointer;">전체 평균 ↕</th>
-              </tr>
-            </thead>
-            <tbody id="students-tbody">
-              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">로딩 중...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      </div><!-- /peer-dash-area -->
-
       <!-- ── 발표평가 집계 영역 ── -->
-      <div id="pitch-dash-area" style="display:none">
-
-        <!-- 발표평가 통계 카드 -->
-        <div class="jdy-grid-4" style="margin-bottom:28px;">
-          <div class="jdy-stat-card"><div class="jdy-stat-icon">👥</div><div class="jdy-stat-val" id="ps-students">-</div><div class="jdy-stat-label">전체 수강생</div></div>
-          <div class="jdy-stat-card"><div class="jdy-stat-icon">📋</div><div class="jdy-stat-val" id="ps-evals">-</div><div class="jdy-stat-label">제출된 평가</div></div>
-          <div class="jdy-stat-card"><div class="jdy-stat-icon">📊</div><div class="jdy-stat-val" id="ps-rate">-</div><div class="jdy-stat-label">평가 완료율</div></div>
-          <div class="jdy-stat-card"><div class="jdy-stat-icon">🏆</div><div class="jdy-stat-val" id="ps-avg">-</div><div class="jdy-stat-label">평균 총점</div></div>
-        </div>
+      <div id="pitch-dash-area">
 
         <!-- 발표평가 집계 테이블 -->
         <div class="jdy-card" style="padding:0;overflow:hidden;">
           <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);">
             <h3 style="font-size:1rem;font-weight:700;margin:0;">학생별 발표평가 집계</h3>
-            <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" style="margin-left:auto" onclick="exportPitchCSV()">
-              <i class="fa-solid fa-download"></i> CSV
-            </button>
           </div>
           <div style="overflow-x:auto;">
             <table class="jdy-table" id="pitch-summary-table" style="min-width:900px;">
@@ -205,31 +149,6 @@
   </footer>
 </div>
 
-<!-- 학생 상세 모달 -->
-<div id="detail-modal" class="jdy-modal-bg" style="display:none">
-  <div class="jdy-modal" style="max-width:660px">
-    <div class="jdy-modal-header">
-      <div>
-        <div class="jdy-modal-title" id="detail-name">학생 이름</div>
-        <div style="font-size:.8rem;color:var(--text2);margin-top:2px;" id="detail-sid"></div>
-      </div>
-      <button class="jdy-modal-close" onclick="closeDetail()">✕</button>
-    </div>
-    <div class="jdy-modal-body" id="detail-body">
-      <!-- 평균 점수 그리드 -->
-      <div id="detail-scores" class="detail-grid"></div>
-      <!-- 개별 평가 목록 -->
-      <h4 style="font-size:.875rem;font-weight:700;color:var(--text2);margin:16px 0 8px;">
-        <i class="fa-solid fa-list"></i> 개별 평가 내역 (<span id="detail-count">0</span>건)
-      </h4>
-      <div id="detail-evals"></div>
-    </div>
-    <div class="jdy-modal-footer">
-      <button class="jdy-btn jdy-btn-secondary" onclick="closeDetail()">닫기</button>
-    </div>
-  </div>
-</div>
-
 <!-- 발표평가 학생 상세 모달 -->
 <div id="pitch-detail-modal" class="jdy-modal-bg" style="display:none">
   <div class="jdy-modal" style="max-width:780px">
@@ -263,23 +182,11 @@ let _initialized = false;
 let _courses     = [];   // instructor's courses
 let _activeSec   = 'all'; // 'all' | 'Q1' | 'Q2' | 'Y2' | course_id
 let _students    = [];   // [{...profile, section?}]
-let _evals       = [];
-let _filtered    = [];
-let _sortAsc     = false;
-let _dashType    = 'peer';
 let _pitchEvals  = [];
 let _pitchRows   = [];
 let _pitchSortAsc = false;
 let _isAllView   = false;
 let _studentSection = {}; // studentId -> section label
-
-const CRITERIA = [
-  { key: 'score_participation',  label: '참여도'   },
-  { key: 'score_responsibility', label: '책임감'   },
-  { key: 'score_cooperation',    label: '협력도'   },
-  { key: 'score_communication',  label: '소통능력' },
-  { key: 'score_contribution',   label: '기여도'   },
-];
 
 // ── 초기화 ────────────────────────────────────────────────
 // _initialized 가드: 이중 발화(INITIAL_SESSION + SIGNED_IN) 방지
@@ -319,8 +226,8 @@ const CRITERIA = [
       if (!_courses.length) {
         document.getElementById('section-tabs').innerHTML =
           '<p style="color:var(--text3);font-size:.875rem;">등록된 강의가 없습니다.</p>';
-        document.getElementById('students-tbody').innerHTML =
-          '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text3)">등록된 강의가 없습니다.</td></tr>';
+        document.getElementById('pitch-summary-tbody').innerHTML =
+          '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text3)">등록된 강의가 없습니다.</td></tr>';
         return;
       }
 
@@ -381,223 +288,22 @@ async function loadSectionData(secOrId) {
   jdy_loading(true);
 
   if (secOrId === 'all') {
-    // 전체: 모든 분반 집계
-    [_students, _evals] = await Promise.all([
-      jdy_getMultiCourseStudents(_courses),
-      jdy_getMultiCourseEvals(_courses.map(c => c.id))
-    ]);
+    _students = await jdy_getMultiCourseStudents(_courses);
     _studentSection = {};
     _students.forEach(s => { _studentSection[s.id] = s.section || '-'; });
     _isAllView = true;
   } else if (['Q1','Q2','Y2'].includes(secOrId)) {
-    // 분반 탭
     const course = _courses.find(c => c.section === secOrId);
     if (!course) { jdy_loading(false); return; }
-    [_students, _evals] = await Promise.all([
-      jdy_getCourseStudents(course.id),
-      jdy_getAllEvalsForCourse(course.id)
-    ]);
+    _students = await jdy_getCourseStudents(course.id);
     _isAllView = false;
   } else {
-    // course_id 직접 (section 없는 강의)
-    [_students, _evals] = await Promise.all([
-      jdy_getCourseStudents(secOrId),
-      jdy_getAllEvalsForCourse(secOrId)
-    ]);
+    _students = await jdy_getCourseStudents(secOrId);
     _isAllView = false;
   }
 
   jdy_loading(false);
-  buildTable();
-  updateStats();
-
-  if (_dashType === 'pitch') loadPitchDashData();
-}
-
-// ── 통계 ─────────────────────────────────────────────────
-function updateStats() {
-  const n   = _students.length;
-  const evN = _evals.length;
-
-  // 정확한 완료율: 분반별 n*(n-1) 합산
-  let maxPossible = 0;
-  if (_isAllView) {
-    const secCount = {};
-    _students.forEach(s => {
-      const sec = _studentSection[s.id] || '_';
-      secCount[sec] = (secCount[sec] || 0) + 1;
-    });
-    maxPossible = Object.values(secCount).reduce((sum, cnt) => sum + cnt * (cnt - 1), 0);
-  } else {
-    maxPossible = n * (n > 0 ? n - 1 : 0);
-  }
-
-  const rate = maxPossible > 0 ? Math.round((evN / maxPossible) * 100) : 0;
-  let totalAvg = 0;
-  if (evN > 0) {
-    const sum = _evals.reduce((acc, e) => acc + parseFloat(jdy_avg(e)), 0);
-    totalAvg = (sum / evN).toFixed(2);
-  }
-
-  document.getElementById('s-students').textContent = n;
-  document.getElementById('s-evals').textContent    = evN;
-  document.getElementById('s-rate').textContent     = rate + '%';
-  document.getElementById('s-avg').textContent      = totalAvg || '-';
-}
-
-// ── 테이블 빌드 ───────────────────────────────────────────
-function buildTable() {
-  // thead 재구성
-  const secCol = _isAllView ? '<th>분반</th>' : '';
-  document.getElementById('students-thead').innerHTML = `<tr>
-    <th>이름</th><th>학번</th>${secCol}
-    <th>받은 평가</th>
-    <th>참여도</th><th>책임감</th><th>협력도</th><th>소통능력</th><th>기여도</th>
-    <th onclick="sortBy('avg')" style="cursor:pointer;">전체 평균 ↕</th>
-  </tr>`;
-
-  const colCount = 9 + (_isAllView ? 1 : 0);
-  document.querySelectorAll('#students-tbody tr td[colspan]').forEach(td => td.setAttribute('colspan', colCount));
-
-  const summary = {};
-  _students.forEach(s => { summary[s.id] = { student: s, evals: [] }; });
-  _evals.forEach(e => { if (summary[e.evaluatee_id]) summary[e.evaluatee_id].evals.push(e); });
-
-  _filtered = Object.values(summary).map(({ student, evals }) => {
-    const avg = evals.length
-      ? (evals.reduce((a, e) => a + parseFloat(jdy_avg(e)), 0) / evals.length).toFixed(2)
-      : null;
-    const criteria = {};
-    CRITERIA.forEach(c => {
-      const vals = evals.map(e => e[c.key]).filter(v => v != null);
-      criteria[c.key] = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : null;
-    });
-    return { student, evals, avg, criteria };
-  });
-
-  renderTable();
-}
-
-function renderTable() {
-  const tbody = document.getElementById('students-tbody');
-  const q     = document.getElementById('search-input').value.trim().toLowerCase();
-  let rows    = _filtered;
-
-  if (q) {
-    rows = rows.filter(r =>
-      (r.student.full_name  || '').toLowerCase().includes(q) ||
-      (r.student.student_id || '').toLowerCase().includes(q)
-    );
-  }
-
-  if (!rows.length) {
-    const cols = 9 + (_isAllView ? 1 : 0);
-    tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:40px;color:var(--text3)">데이터가 없습니다.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = rows.map(r => {
-    const avg  = r.avg ? parseFloat(r.avg) : null;
-    const chip = avg == null ? '-'
-      : `<span class="score-chip ${avg>=4?'score-high':avg>=3?'score-mid':'score-low'}">${avg}</span>`;
-    const secCell = _isAllView
-      ? `<td class="cell-sec"><span class="jdy-section-badge jdy-section-${_studentSection[r.student.id] || ''}">${_studentSection[r.student.id] || '-'}</span></td>`
-      : '';
-    const cells = CRITERIA.map(c => {
-      const v = r.criteria[c.key];
-      return `<td>${v ? jdy_scoreBar(v) : '<span style="color:var(--text3)">-</span>'}</td>`;
-    }).join('');
-
-    return `<tr onclick="openDetail('${r.student.id}')">
-      <td style="font-weight:600">${r.student.full_name || '(미설정)'}</td>
-      <td style="color:var(--text2)">${r.student.student_id || '-'}</td>
-      ${secCell}
-      <td><strong>${r.evals.length}</strong>건</td>
-      ${cells}
-      <td>${chip}</td>
-    </tr>`;
-  }).join('');
-}
-
-// ── 검색 / 정렬 ───────────────────────────────────────────
-function filterTable() { renderTable(); }
-
-function sortBy(field) {
-  _sortAsc = !_sortAsc;
-  _filtered.sort((a, b) => {
-    const av = parseFloat(a.avg) || 0;
-    const bv = parseFloat(b.avg) || 0;
-    return _sortAsc ? av - bv : bv - av;
-  });
-  renderTable();
-}
-
-// ── 대시보드 유형 전환 ────────────────────────────────────
-function switchDashType(type) {
-  _dashType = type;
-  document.querySelectorAll('#dash-type-tabs .jdy-tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.dtype === type)
-  );
-  document.getElementById('peer-dash-area').style.display  = type === 'peer'  ? 'block' : 'none';
-  document.getElementById('pitch-dash-area').style.display = type === 'pitch' ? 'block' : 'none';
-  if (type === 'pitch') loadPitchDashData();
-}
-
-// ── 학생 상세 모달 ────────────────────────────────────────
-function openDetail(studentId) {
-  const row = _filtered.find(r => r.student.id === studentId);
-  if (!row) return;
-
-  const secLabel = _isAllView ? (` · ${_studentSection[studentId] || '-'}반`) : '';
-  document.getElementById('detail-name').textContent = (row.student.full_name || '(미설정)') + secLabel;
-  document.getElementById('detail-sid').textContent  = row.student.student_id ? `학번: ${row.student.student_id}` : '';
-  document.getElementById('detail-count').textContent = row.evals.length;
-
-  const scoresEl = document.getElementById('detail-scores');
-  if (row.evals.length) {
-    scoresEl.innerHTML = CRITERIA.map(c => {
-      const vals = row.evals.map(e => e[c.key]).filter(v => v != null);
-      const avg  = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '-';
-      return `<div class="detail-score"><div class="val">${avg}</div><div class="lbl">${c.label}</div></div>`;
-    }).join('') + `
-      <div class="detail-score" style="background:linear-gradient(135deg,#eff6ff,#dbeafe)">
-        <div class="val" style="color:var(--primary)">${row.avg || '-'}</div>
-        <div class="lbl">종합 평균</div>
-      </div>`;
-  } else {
-    scoresEl.innerHTML = '<p style="color:var(--text3);font-size:.875rem;">받은 평가가 없습니다.</p>';
-  }
-
-  const evalsEl = document.getElementById('detail-evals');
-  if (!row.evals.length) {
-    evalsEl.innerHTML = '<div class="jdy-empty"><p>평가 내역이 없습니다.</p></div>';
-  } else {
-    evalsEl.innerHTML = row.evals.map((e, i) => `
-      <div class="eval-item">
-        <div class="eval-item-head">
-          <span>평가 #${i+1}</span>
-          <span>${jdy_fmtDate(e.submitted_at)}</span>
-          <span class="score-chip ${parseFloat(jdy_avg(e))>=4?'score-high':parseFloat(jdy_avg(e))>=3?'score-mid':'score-low'}">
-            평균 ${jdy_avg(e)}점
-          </span>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          ${CRITERIA.map(c =>
-            `<span style="font-size:.75rem;background:var(--bg);border-radius:6px;padding:3px 8px;">
-              ${c.label} <strong>${e[c.key]}</strong>점
-            </span>`
-          ).join('')}
-        </div>
-        ${e.comment ? `<div class="eval-comment">${e.comment}</div>` : ''}
-      </div>`
-    ).join('');
-  }
-
-  document.getElementById('detail-modal').style.display = 'flex';
-}
-
-function closeDetail() {
-  document.getElementById('detail-modal').style.display = 'none';
+  await loadPitchDashData();
 }
 
 // ── 발표평가 대시보드 ─────────────────────────────────────
@@ -783,33 +489,6 @@ function openPitchDetail(studentId) {
 
 function closePitchDetail() {
   document.getElementById('pitch-detail-modal').style.display = 'none';
-}
-
-// ── CSV 내보내기 (동료평가) ───────────────────────────────
-function exportCSV() {
-  const secLabel = _isAllView ? '전체' : (_activeSec || '');
-  const header = ['이름','학번',...(_isAllView?['분반']:[]),'받은평가수','참여도','책임감','협력도','소통능력','기여도','종합평균'];
-  const rows   = _filtered.map(r => [
-    r.student.full_name  || '',
-    r.student.student_id || '',
-    ...(_isAllView ? [_studentSection[r.student.id] || ''] : []),
-    r.evals.length,
-    r.criteria.score_participation  || '',
-    r.criteria.score_responsibility || '',
-    r.criteria.score_cooperation    || '',
-    r.criteria.score_communication  || '',
-    r.criteria.score_contribution   || '',
-    r.avg || ''
-  ]);
-  const csv  = [header, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `동료평가_${secLabel}_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  jdy_toast('success', 'CSV 파일이 다운로드되었습니다.');
 }
 
 // ── CSV 내보내기 (발표평가) ───────────────────────────────
