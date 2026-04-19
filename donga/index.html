@@ -121,23 +121,6 @@
       font-size: .82rem;
     }
 
-    /* 분반 합계 섹션 */
-    .totals-section {
-      margin-top: 32px;
-      padding-top: 28px;
-      border-top: 2px solid var(--border);
-    }
-    .totals-section h3 {
-      font-size: 1.15rem;
-      font-weight: 800;
-      margin-bottom: 4px;
-    }
-    .totals-section .sub-desc {
-      font-size: .85rem;
-      color: var(--text2);
-      margin-bottom: 16px;
-    }
-
     /* 고정 하단 액션바 */
     .eva-actions {
       position: fixed;
@@ -269,7 +252,7 @@
 
         <!-- 완료 배너 (제출 후 표시) -->
         <div id="submitted-banner" class="submitted-banner" style="display:none">
-          ✅ 모든 발표평가가 완료되었습니다! 아래에서 분반 집계 결과를 확인하세요.
+          ✅ 모든 발표평가가 완료되었습니다!
         </div>
 
         <!-- 평가 입력 테이블 -->
@@ -306,43 +289,6 @@
                 </tr>
               </tbody>
             </table>
-          </div>
-        </div>
-
-        <!-- 분반 합계 버튼 (항상 표시) -->
-        <div id="totals-btn-wrap" style="text-align:center;margin-bottom:20px;display:none;">
-          <button class="jdy-btn jdy-btn-secondary" onclick="loadTotals()">
-            <i class="fa-solid fa-chart-bar"></i> 분반 합계 보기
-          </button>
-        </div>
-
-        <!-- 분반 합계 섹션 (제출 후 또는 버튼 클릭 시 표시) -->
-        <div id="totals-section" class="totals-section" style="display:none">
-          <h3><i class="fa-solid fa-trophy" style="color:var(--primary);margin-right:8px;"></i>분반 발표평가 집계</h3>
-          <p class="sub-desc">분반 전체 학생이 받은 발표평가의 평균 순위입니다.</p>
-          <div class="jdy-card" style="padding:0;overflow:hidden;">
-            <div style="overflow-x:auto;">
-              <table class="jdy-table" id="totals-table" style="min-width:900px;border-radius:0;">
-                <thead>
-                  <tr>
-                    <th>순위</th>
-                    <th>이름</th>
-                    <th>자기이해<br>+적성<br><small style="color:var(--primary)">(20)</small></th>
-                    <th>창업<br>아이템<br><small style="color:var(--primary)">(15)</small></th>
-                    <th>거시<br>환경<br><small style="color:var(--primary)">(15)</small></th>
-                    <th>고객/<br>시장<br><small style="color:var(--primary)">(10)</small></th>
-                    <th>수익<br>구조<br><small style="color:var(--primary)">(15)</small></th>
-                    <th>실행<br>준비<br><small style="color:var(--primary)">(15)</small></th>
-                    <th>지원<br>전략<br><small style="color:var(--primary)">(10)</small></th>
-                    <th>평균총점<br><small style="color:var(--text3)">(100)</small></th>
-                    <th>평가수</th>
-                  </tr>
-                </thead>
-                <tbody id="totals-tbody">
-                  <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--text3)">집계 중...</td></tr>
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
 
@@ -418,6 +364,7 @@ let _profile     = null;
 let _initialized = false;
 let _course      = null;
 let _members     = [];   // 분반 동료 (본인 제외)
+let _roster      = [];   // 출석부 명단 [{no, sid, name}, ...]
 let _myEvals     = {};   // evaluatee_id → eval row
 let _autoSaveTimer = null;
 
@@ -515,15 +462,18 @@ async function initEvalView() {
 
   updateHeader(null, section);
 
-  // ② 강의 + 분반 멤버 동시 시작
-  const coursePromise   = jdy_getActiveCourseBySection(section);
-  const membersPromise  = jdy_getSectionMembers(section, userId);
+  // ① roster.json + 강의 + 분반 멤버 동시 시작
+  const rosterPromise   = fetch('roster.json').then(r => r.json()).catch(() => ({}));
+  const coursePromise    = jdy_getActiveCourseBySection(section);
+  const membersPromise   = jdy_getSectionMembers(section, userId);
 
-  // ③ 강의 ID 확보 즉시 평가도 시작 (membersPromise는 계속 실행 중)
-  _course = await coursePromise;
+  const [rosterAll, course, members] = await Promise.all([rosterPromise, coursePromise, membersPromise]);
+
+  _roster  = rosterAll[section] || [];
+  _course  = course;
+  _members = members;
 
   if (!_course) {
-    _members = await membersPromise;
     document.getElementById('eval-tbody').innerHTML =
       `<tr><td colspan="11" style="text-align:center;padding:48px;color:var(--text3);">
         <div class="jdy-empty-icon">📭</div>
@@ -535,13 +485,8 @@ async function initEvalView() {
 
   updateHeader(_course, section);
 
-  // ③ getMyPitchEvals 즉시 시작 — membersPromise와 겹쳐서 실행
-  const evalsPromise = jdy_getMyPitchEvals(_course.id, userId);
-
-  // ④ 멤버 + 평가 동시 대기
-  const [members, evals] = await Promise.all([membersPromise, evalsPromise]);
-
-  _members = members;
+  // ② 평가 조회
+  const evals = await jdy_getMyPitchEvals(_course.id, userId);
   _myEvals = {};
   evals.forEach(e => { _myEvals[e.evaluatee_id] = e; });
 
@@ -556,14 +501,10 @@ async function initEvalView() {
   renderEvalTable(draft);
   updateProgress();
 
-  // 분반 합계 버튼 항상 표시
-  document.getElementById('totals-btn-wrap').style.display = 'block';
-
-  // 모두 완료된 경우 → 배너 + 합계 자동 로드
+  // 모두 완료된 경우 → 배너
   const allDone = _members.length > 0 && _members.every(m => _myEvals[m.id]);
   if (allDone) {
     showSubmittedBanner();
-    await loadTotals();
   } else {
     document.getElementById('eval-actions').style.display = 'flex';
   }
@@ -586,22 +527,32 @@ function updateHeader(course, section) {
 function renderEvalTable(draft = {}) {
   const tbody = document.getElementById('eval-tbody');
 
-  if (!_members.length) {
+  if (!_roster.length) {
     tbody.innerHTML =
       `<tr><td colspan="11" style="text-align:center;padding:48px;color:var(--text3);">
         <div class="jdy-empty-icon">👥</div>
-        <p>같은 분반 동료가 없습니다.</p>
+        <p>출석부 명단을 불러올 수 없습니다.</p>
       </td></tr>`;
     return;
   }
 
-  tbody.innerHTML = _members.map((m, idx) => {
-    const existing   = _myEvals[m.id];
-    const draftRow   = draft[m.id] || {};
-    const submitted  = !!existing;
+  // 출석부 학번 → DB 프로필 매핑
+  const sidToProfile = {};
+  _members.forEach(m => { if (m.student_id) sidToProfile[m.student_id] = m; });
 
-    // 점수 셀 (각 항목별 배점에 맞춰 입력)
+  tbody.innerHTML = _roster.map(r => {
+    const dbUser    = sidToProfile[r.sid];        // DB 등록된 학생
+    const uid       = dbUser ? dbUser.id : null;
+    const existing  = uid ? _myEvals[uid] : null;
+    const draftRow  = uid ? (draft[uid] || {}) : {};
+    const submitted = !!existing;
+    const registered = !!dbUser;
+
+    // 점수 셀
     const scoreCells = CRITERIA.map(c => {
+      if (!registered) {
+        return `<td style="text-align:center;"><input type="number" class="score-input" value="" disabled placeholder="-" style="opacity:.4"></td>`;
+      }
       const val = submitted
         ? (existing[c.name] ?? '')
         : (draftRow[c.name] ?? '');
@@ -612,25 +563,27 @@ function renderEvalTable(draft = {}) {
       }
       return `<td style="text-align:center;"><input type="number" class="score-input${cls}"
         min="0" max="${c.max}" value="${val !== '' ? val : ''}"
-        data-uid="${m.id}" data-col="${c.name}" data-max="${c.max}"
+        data-uid="${uid}" data-col="${c.name}" data-max="${c.max}"
         oninput="onScoreInput(this)"
         placeholder="-"></td>`;
     }).join('');
 
     // 총점 셀
-    const totalVal = submitted
-      ? computeTotal(existing)
+    const totalVal = !registered ? '-'
+      : submitted ? computeTotal(existing)
       : computeDraftTotal(draftRow);
-    const totalCell = `<td style="text-align:center;font-weight:600;color:var(--primary);" id="avg-${m.id}">${totalVal}</td>`;
+    const totalCell = `<td style="text-align:center;font-weight:600;color:var(--primary);" ${uid ? `id="avg-${uid}"` : ''}>${totalVal}</td>`;
 
     // 상태 셀
-    const statusCell = submitted
-      ? `<td style="text-align:center;"><span style="color:var(--success);font-weight:700;font-size:.82rem;">✓ 제출됨</span></td>`
-      : `<td></td>`;
+    const statusCell = !registered
+      ? `<td style="text-align:center;"><span style="color:var(--text3);font-size:.75rem;">미등록</span></td>`
+      : submitted
+        ? `<td style="text-align:center;"><span style="color:var(--success);font-weight:700;font-size:.82rem;">✓ 제출됨</span></td>`
+        : `<td></td>`;
 
-    return `<tr data-uid="${m.id}">
-      <td style="text-align:center;color:var(--text3);font-size:.85rem;">${idx + 1}</td>
-      <td style="font-weight:600;">${m.full_name || '(이름 미설정)'}</td>
+    return `<tr ${uid ? `data-uid="${uid}"` : ''} ${!registered ? 'style="opacity:.5"' : ''}>
+      <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.no}</td>
+      <td style="font-weight:600;">${r.name}</td>
       ${scoreCells}
       ${totalCell}
       ${statusCell}
@@ -676,8 +629,12 @@ function updateRowTotal(uid) {
 
 // ── 진행률 업데이트 ──────────────────────────────────────────
 function updateProgress() {
-  const total = _members.length;
-  const done  = _members.filter(m => _myEvals[m.id]).length;
+  // roster 기준: DB 등록된 학생 중 평가 완료 수
+  const sidToProfile = {};
+  _members.forEach(m => { if (m.student_id) sidToProfile[m.student_id] = m; });
+  const registered = _roster.filter(r => sidToProfile[r.sid]);
+  const total = registered.length;
+  const done  = registered.filter(r => _myEvals[sidToProfile[r.sid].id]).length;
   const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
 
   const el = (id) => document.getElementById(id);
@@ -809,7 +766,6 @@ async function submitAllEvals() {
   renderEvalTable({});
   updateProgress();
   showSubmittedBanner();
-  await loadTotals();
 }
 
 // ── 완료 배너 표시 ───────────────────────────────────────────
@@ -818,90 +774,6 @@ function showSubmittedBanner() {
   const actions = document.getElementById('eval-actions');
   if (banner)  banner.style.display  = 'block';
   if (actions) actions.style.display = 'none';
-}
-
-// ── 분반 합계 로드 ───────────────────────────────────────────
-async function loadTotals() {
-  const section = document.getElementById('totals-section');
-  if (section) section.style.display = 'block';
-
-  // 버튼 레이블 변경
-  const btnWrap = document.getElementById('totals-btn-wrap');
-  if (btnWrap) {
-    btnWrap.innerHTML = `<button class="jdy-btn jdy-btn-secondary" onclick="loadTotals()">
-      <i class="fa-solid fa-rotate-right"></i> 분반 합계 새로고침
-    </button>`;
-  }
-
-  const tbody = document.getElementById('totals-tbody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--text3);">집계 중...</td></tr>';
-
-  if (!_course) return;
-
-  const [allEvals, allMembers] = await Promise.all([
-    jdy_getSectionAllPitchEvals(_course.id),
-    jdy_getSectionMembers(_profile.section, null) // 본인 포함
-  ]);
-
-  // 집계
-  const stats = {};
-  allMembers.forEach(m => {
-    stats[m.id] = { name: m.full_name, counts: {}, totals: {} };
-    CRITERIA.forEach(c => {
-      stats[m.id].counts[c.name] = 0;
-      stats[m.id].totals[c.name] = 0;
-    });
-  });
-
-  allEvals.forEach(ev => {
-    if (!stats[ev.evaluatee_id]) return;
-    CRITERIA.forEach(c => {
-      const v = ev[c.name];
-      if (v != null) {
-        stats[ev.evaluatee_id].totals[c.name] += Number(v);
-        stats[ev.evaluatee_id].counts[c.name]++;
-      }
-    });
-  });
-
-  // 개인별 평균총점 계산
-  const rows = allMembers.map(m => {
-    const s = stats[m.id];
-    const perCrit = CRITERIA.map(c => {
-      const cnt = s.counts[c.name];
-      return cnt > 0 ? s.totals[c.name] / cnt : null;
-    });
-    const validAvgs = perCrit.filter(v => v !== null);
-    const overall   = validAvgs.length
-      ? validAvgs.reduce((a, b) => a + b, 0)
-      : null;
-    const evalCount = Math.max(0, ...CRITERIA.map(c => s.counts[c.name]));
-    return { m, perCrit, overall, evalCount };
-  });
-
-  // 평균총점 내림차순 정렬
-  rows.sort((a, b) => (b.overall ?? -1) - (a.overall ?? -1));
-
-  if (!tbody) return;
-
-  tbody.innerHTML = rows.map((r, idx) => {
-    const rank      = idx + 1;
-    const rankLabel = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-    const perCells  = r.perCrit.map(v =>
-      `<td style="text-align:center;">${v !== null ? v.toFixed(1) : '-'}</td>`
-    ).join('');
-    const overall = r.overall !== null
-      ? `<td style="text-align:center;font-weight:700;color:var(--primary);">${r.overall.toFixed(1)}</td>`
-      : `<td style="text-align:center;color:var(--text3);">-</td>`;
-
-    return `<tr>
-      <td style="text-align:center;font-size:1.1rem;">${rankLabel}</td>
-      <td style="font-weight:600;">${r.m.full_name || '(미설정)'}</td>
-      ${perCells}
-      ${overall}
-      <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.evalCount}명</td>
-    </tr>`;
-  }).join('');
 }
 
 // ── 프로필 저장 (분반 선택 + 자동 수강신청) ─────────────────
