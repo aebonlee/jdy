@@ -353,9 +353,8 @@ let _session     = null;
 let _profile     = null;
 let _initialized = false;
 let _course      = null;
-let _members     = [];   // 분반 동료 (본인 제외)
 let _roster      = [];   // 출석부 명단 [{no, sid, name}, ...]
-let _myEvals     = {};   // evaluatee_id → eval row
+let _myEvals     = {};   // evaluatee_sid → eval row
 
 // 발표평가 항목 (app.js JDY_PITCH_CRITERIA 재사용)
 const CRITERIA = JDY_PITCH_CRITERIA.map(c => ({ name: c.col, label: c.label, max: c.max }));
@@ -460,16 +459,14 @@ async function initEvalView(section) {
     a.classList.toggle('active', a.href.includes('section=' + section));
   });
 
-  // ① roster.json + 강의 + 분반 멤버 동시 시작
+  // ① roster.json + 강의 동시 로드
   const rosterPromise  = fetch('roster.json').then(r => r.json()).catch(() => ({}));
   const coursePromise   = jdy_getActiveCourseBySection(section);
-  const membersPromise  = jdy_getSectionMembers(section, userId);
 
-  const [rosterAll, course, members] = await Promise.all([rosterPromise, coursePromise, membersPromise]);
+  const [rosterAll, course] = await Promise.all([rosterPromise, coursePromise]);
 
   _roster  = rosterAll[section] || [];
   _course  = course;
-  _members = members;
 
   if (!_course) {
     document.getElementById('eval-tbody').innerHTML =
@@ -483,16 +480,18 @@ async function initEvalView(section) {
 
   updateHeader(_course, section);
 
-  // ② 평가 조회 (Supabase)
+  // ② 평가 조회 (Supabase) — evaluatee_sid 기준
   const evals = await jdy_getMyPitchEvals(_course.id, userId);
   _myEvals = {};
-  evals.forEach(e => { _myEvals[e.evaluatee_id] = e; });
+  evals.forEach(e => { if (e.evaluatee_sid) _myEvals[e.evaluatee_sid] = e; });
 
   renderEvalTable();
   updateProgress();
 
   // 모두 완료된 경우 → 배너
-  const allDone = _members.length > 0 && _members.every(m => _myEvals[m.id]);
+  const mySid = _profile?.student_id;
+  const others = _roster.filter(r => r.sid !== mySid);
+  const allDone = others.length > 0 && others.every(r => _myEvals[r.sid]);
   if (allDone) {
     showSubmittedBanner();
   } else {
@@ -526,20 +525,12 @@ function renderEvalTable() {
     return;
   }
 
-  // 출석부 학번 → DB 프로필 매핑 (본인 포함)
-  const sidToProfile = {};
-  _members.forEach(m => { if (m.student_id) sidToProfile[m.student_id] = m; });
-
-  // 본인 학번도 매핑 (본인은 _members에서 제외되어 있으므로 별도 처리)
   const mySid = _profile?.student_id;
 
   tbody.innerHTML = _roster.map(r => {
     const isSelf    = (mySid && r.sid === mySid);
-    const dbUser    = sidToProfile[r.sid];        // DB 등록된 학생 (본인 제외)
-    const uid       = dbUser ? dbUser.id : null;
-    const existing  = uid ? _myEvals[uid] : null;
+    const existing  = _myEvals[r.sid];       // evaluatee_sid 기준 조회
     const submitted = !!existing;
-    const registered = !!dbUser;
 
     // 본인 행 → 평가 불가, "본인" 표시
     if (isSelf) {
@@ -555,21 +546,7 @@ function renderEvalTable() {
       </tr>`;
     }
 
-    // 미등록 학생
-    if (!registered) {
-      const emptyCells = CRITERIA.map(() =>
-        `<td style="text-align:center;"><input type="number" class="score-input" value="" disabled placeholder="-" style="opacity:.4"></td>`
-      ).join('');
-      return `<tr style="opacity:.5">
-        <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.no}</td>
-        <td style="font-weight:600;">${r.name}</td>
-        ${emptyCells}
-        <td style="text-align:center;font-weight:600;color:var(--primary);">-</td>
-        <td style="text-align:center;"><span style="color:var(--text3);font-size:.75rem;">미등록</span></td>
-      </tr>`;
-    }
-
-    // 점수 셀
+    // 점수 셀 — DB 등록 여부와 무관하게 모든 학생에게 입력 활성화
     const scoreCells = CRITERIA.map(c => {
       const val = submitted ? (existing[c.name] ?? '') : '';
       const cls = (val !== '' && val != null) ? ' filled' : '';
@@ -579,21 +556,21 @@ function renderEvalTable() {
       }
       return `<td style="text-align:center;"><input type="number" class="score-input${cls}"
         min="0" max="${c.max}" value="${val !== '' ? val : ''}"
-        data-uid="${uid}" data-col="${c.name}" data-max="${c.max}"
+        data-uid="${r.sid}" data-col="${c.name}" data-max="${c.max}"
         oninput="onScoreInput(this)"
         placeholder="-"></td>`;
     }).join('');
 
     // 총점 셀
     const totalVal = submitted ? computeTotal(existing) : '-';
-    const totalCell = `<td style="text-align:center;font-weight:600;color:var(--primary);" id="avg-${uid}">${totalVal}</td>`;
+    const totalCell = `<td style="text-align:center;font-weight:600;color:var(--primary);" id="avg-${r.sid}">${totalVal}</td>`;
 
     // 상태 셀
     const statusCell = submitted
       ? `<td style="text-align:center;"><span style="color:var(--success);font-weight:700;font-size:.82rem;">✓ 제출됨</span></td>`
       : `<td></td>`;
 
-    return `<tr data-uid="${uid}">
+    return `<tr data-uid="${r.sid}">
       <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.no}</td>
       <td style="font-weight:600;">${r.name}</td>
       ${scoreCells}
@@ -636,13 +613,10 @@ function updateRowTotal(uid) {
 
 // ── 진행률 업데이트 ──────────────────────────────────────────
 function updateProgress() {
-  // roster 기준: DB 등록된 학생(본인 제외) 중 평가 완료 수
   const mySid = _profile?.student_id;
-  const sidToProfile = {};
-  _members.forEach(m => { if (m.student_id) sidToProfile[m.student_id] = m; });
-  const targets = _roster.filter(r => r.sid !== mySid && sidToProfile[r.sid]);
+  const targets = _roster.filter(r => r.sid !== mySid);
   const total = targets.length;
-  const done  = targets.filter(r => _myEvals[sidToProfile[r.sid].id]).length;
+  const done  = targets.filter(r => _myEvals[r.sid]).length;
   const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
 
   const el = (id) => document.getElementById(id);
@@ -655,16 +629,18 @@ function updateProgress() {
 async function submitAllEvals() {
   if (!_course) { jdy_toast('error', '강의 정보를 불러올 수 없습니다.'); return; }
 
+  const mySid = _profile?.student_id;
   const batch = [];
   let missingName = null;
 
-  for (const m of _members) {
-    if (_myEvals[m.id]) continue; // 이미 제출
+  for (const r of _roster) {
+    if (r.sid === mySid) continue;          // 본인 스킵
+    if (_myEvals[r.sid]) continue;          // 이미 제출
 
-    const row = document.querySelector(`tr[data-uid="${m.id}"]`);
+    const row = document.querySelector(`tr[data-uid="${r.sid}"]`);
     if (!row) continue;
 
-    const ev = { evaluatee_id: m.id, course_id: _course.id };
+    const ev = { evaluatee_sid: r.sid, course_id: _course.id };
     let allFilled = true;
 
     for (const c of CRITERIA) {
@@ -672,7 +648,7 @@ async function submitAllEvals() {
       const val = inp ? parseInt(inp.value) : NaN;
       if (isNaN(val) || val < 0 || val > c.max) {
         allFilled = false;
-        missingName = m.full_name || m.student_id;
+        missingName = r.name;
         break;
       }
       ev[c.name] = val;
@@ -688,7 +664,8 @@ async function submitAllEvals() {
   }
 
   // 이미 전부 완료 상태
-  if (!batch.length && _members.length > 0 && _members.every(m => _myEvals[m.id])) {
+  const others = _roster.filter(r => r.sid !== mySid);
+  if (!batch.length && others.length > 0 && others.every(r => _myEvals[r.sid])) {
     jdy_toast('success', '이미 모든 평가가 제출되어 있습니다.');
     return;
   }
@@ -706,7 +683,7 @@ async function submitAllEvals() {
   const rows = batch.map(e => ({ ...e, evaluator_id: session.user.id }));
   const { error } = await sb
     .from('jdy_pitch_evaluations')
-    .upsert(rows, { onConflict: 'evaluator_id,evaluatee_id,course_id' });
+    .upsert(rows, { onConflict: 'evaluator_id,evaluatee_sid,course_id' });
 
   if (error) {
     jdy_loading(false);
@@ -717,11 +694,11 @@ async function submitAllEvals() {
   // 평가 캐시 갱신
   const freshEvals = await jdy_getMyPitchEvals(_course.id, session.user.id);
   _myEvals = {};
-  freshEvals.forEach(e => { _myEvals[e.evaluatee_id] = e; });
+  freshEvals.forEach(e => { if (e.evaluatee_sid) _myEvals[e.evaluatee_sid] = e; });
 
   jdy_loading(false);
 
-  jdy_toast('success', `✅ ${batch.length}명 발표평가 제출 완료!`);
+  jdy_toast('success', `${batch.length}명 발표평가 제출 완료!`);
   renderEvalTable();
   updateProgress();
   showSubmittedBanner();

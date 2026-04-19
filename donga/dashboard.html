@@ -181,12 +181,13 @@ let _profile     = null;
 let _initialized = false;
 let _courses     = [];   // instructor's courses
 let _activeSec   = 'all'; // 'all' | 'Q1' | 'Q2' | 'Y2' | course_id
-let _students    = [];   // [{...profile, section?}]
+let _rosterAll   = {};   // roster.json 전체 { Q1:[...], Q2:[...], Y2:[...] }
+let _students    = [];   // [{sid, name, no, section?}] — roster 기반
 let _pitchEvals  = [];
 let _pitchRows   = [];
 let _pitchSortAsc = false;
 let _isAllView   = false;
-let _studentSection = {}; // studentId -> section label
+let _studentSection = {}; // sid -> section label
 
 // ── 초기화 ────────────────────────────────────────────────
 // _initialized 가드: 이중 발화(INITIAL_SESSION + SIGNED_IN) 방지
@@ -220,6 +221,9 @@ let _studentSection = {}; // studentId -> section label
 
       const allCourses = await jdy_getCourses(false);
       _courses = allCourses.filter(c => c.instructor_id === _session.user.id);
+
+      // roster.json 로드
+      _rosterAll = await fetch('roster.json').then(r => r.json()).catch(() => ({}));
 
       jdy_loading(false);
 
@@ -277,7 +281,7 @@ function buildSectionTabs() {
   document.getElementById('section-tabs').innerHTML = html;
 }
 
-// ── 분반 데이터 로드 ──────────────────────────────────────
+// ── 분반 데이터 로드 (roster.json 기반) ──────────────────
 async function loadSectionData(secOrId) {
   _activeSec = secOrId;
 
@@ -287,18 +291,24 @@ async function loadSectionData(secOrId) {
 
   jdy_loading(true);
 
+  _studentSection = {};
+
   if (secOrId === 'all') {
-    _students = await jdy_getMultiCourseStudents(_courses);
-    _studentSection = {};
-    _students.forEach(s => { _studentSection[s.id] = s.section || '-'; });
+    _students = [];
+    ['Q1','Q2','Y2'].forEach(sec => {
+      const list = _rosterAll[sec] || [];
+      list.forEach(r => {
+        _students.push({ sid: r.sid, name: r.name, no: r.no, section: sec });
+        _studentSection[r.sid] = sec;
+      });
+    });
     _isAllView = true;
   } else if (['Q1','Q2','Y2'].includes(secOrId)) {
-    const course = _courses.find(c => c.section === secOrId);
-    if (!course) { jdy_loading(false); return; }
-    _students = await jdy_getCourseStudents(course.id);
+    const list = _rosterAll[secOrId] || [];
+    _students = list.map(r => ({ sid: r.sid, name: r.name, no: r.no, section: secOrId }));
     _isAllView = false;
   } else {
-    _students = await jdy_getCourseStudents(secOrId);
+    _students = [];
     _isAllView = false;
   }
 
@@ -332,7 +342,7 @@ function updatePitchStats() {
   if (_isAllView) {
     const secCount = {};
     _students.forEach(s => {
-      const sec = _studentSection[s.id] || '_';
+      const sec = _studentSection[s.sid] || '_';
       secCount[sec] = (secCount[sec] || 0) + 1;
     });
     maxPossible = Object.values(secCount).reduce((sum, cnt) => sum + cnt * (cnt - 1), 0);
@@ -368,9 +378,10 @@ function buildPitchTable() {
     </th>
   </tr>`;
 
+  // roster 기반: evaluatee_sid로 그룹핑
   const map = {};
-  _students.forEach((s, i) => { map[s.id] = { student: s, idx: i + 1, evals: [] }; });
-  _pitchEvals.forEach(e => { if (map[e.evaluatee_id]) map[e.evaluatee_id].evals.push(e); });
+  _students.forEach((s, i) => { map[s.sid] = { student: s, idx: i + 1, evals: [] }; });
+  _pitchEvals.forEach(e => { if (e.evaluatee_sid && map[e.evaluatee_sid]) map[e.evaluatee_sid].evals.push(e); });
 
   _pitchRows = Object.values(map).map(({ student, idx, evals }) => {
     const avgTotal = evals.length
@@ -400,17 +411,17 @@ function renderPitchTable() {
     const chip = avg == null ? '-'
       : `<span class="score-chip ${avg>=80?'score-high':avg>=60?'score-mid':'score-low'}">${avg}</span>`;
     const secCell = _isAllView
-      ? `<td class="cell-sec"><span class="jdy-section-badge jdy-section-${_studentSection[r.student.id] || ''}">${_studentSection[r.student.id] || '-'}</span></td>`
+      ? `<td class="cell-sec"><span class="jdy-section-badge jdy-section-${_studentSection[r.student.sid] || ''}">${_studentSection[r.student.sid] || '-'}</span></td>`
       : '';
     const cells = JDY_PITCH_CRITERIA.map(c => {
       const v = r.criteria[c.col];
       return `<td style="text-align:center">${v != null ? v : '<span style="color:var(--text3)">-</span>'}</td>`;
     }).join('');
 
-    return `<tr onclick="openPitchDetail('${r.student.id}')">
+    return `<tr onclick="openPitchDetail('${r.student.sid}')">
       <td style="text-align:center">${r.idx}</td>
-      <td style="font-weight:600">${r.student.full_name || '(미설정)'}</td>
-      <td style="color:var(--text2)">${r.student.student_id || '-'}</td>
+      <td style="font-weight:600">${r.student.name || '(미설정)'}</td>
+      <td style="color:var(--text2)">${r.student.sid || '-'}</td>
       ${secCell}
       <td style="text-align:center"><strong>${r.evals.length}</strong>건</td>
       ${cells}
@@ -429,13 +440,13 @@ function pitchSortBy() {
   renderPitchTable();
 }
 
-function openPitchDetail(studentId) {
-  const row = _pitchRows.find(r => r.student.id === studentId);
+function openPitchDetail(studentSid) {
+  const row = _pitchRows.find(r => r.student.sid === studentSid);
   if (!row) return;
 
-  const secLabel = _isAllView ? ` · ${_studentSection[studentId] || '-'}반` : '';
-  document.getElementById('pd-name').textContent = (row.student.full_name || '(미설정)') + secLabel;
-  document.getElementById('pd-sid').textContent  = row.student.student_id ? `학번: ${row.student.student_id}` : '';
+  const secLabel = _isAllView ? ` · ${_studentSection[studentSid] || '-'}반` : '';
+  document.getElementById('pd-name').textContent = (row.student.name || '(미설정)') + secLabel;
+  document.getElementById('pd-sid').textContent  = studentSid ? `학번: ${studentSid}` : '';
 
   const body = document.getElementById('pd-body');
   if (!row.evals.length) {
@@ -498,9 +509,9 @@ function exportPitchCSV() {
     ...JDY_PITCH_CRITERIA.map(c => c.label), '평균총점'];
   const rows     = _pitchRows.map(r => [
     r.idx,
-    r.student.full_name  || '',
-    r.student.student_id || '',
-    ...(_isAllView ? [_studentSection[r.student.id] || ''] : []),
+    r.student.name || '',
+    r.student.sid  || '',
+    ...(_isAllView ? [_studentSection[r.student.sid] || ''] : []),
     r.evals.length,
     ...JDY_PITCH_CRITERIA.map(c => r.criteria[c.col] || ''),
     r.avgTotal || ''

@@ -164,26 +164,22 @@ async function jdy_getMyPitchEvals(courseId, myId) {
   return data || [];
 }
 
-/** 발표평가 일괄 저장 (upsert) */
+/** 발표평가 일괄 저장 (upsert) — evaluatee_sid 기준 */
 async function jdy_savePitchEvalsBatch(evals) {
   const session = await jdy_getSession();
   if (!session) return { error: '로그인이 필요합니다.' };
   const rows = evals.map(e => ({ ...e, evaluator_id: session.user.id }));
   const { error } = await sb
     .from('jdy_pitch_evaluations')
-    .upsert(rows, { onConflict: 'evaluator_id,evaluatee_id,course_id' });
+    .upsert(rows, { onConflict: 'evaluator_id,evaluatee_sid,course_id' });
   return { error };
 }
 
-/** 교수자용: 강의 전체 발표평가 조회 */
+/** 교수자용: 강의 전체 발표평가 조회 (evaluatee_sid 기준) */
 async function jdy_getAllPitchEvalsForCourse(courseId) {
   const { data, error } = await sb
     .from('jdy_pitch_evaluations')
-    .select(`
-      *,
-      evaluator:jdy_profiles!evaluator_id(full_name, student_id),
-      evaluatee:jdy_profiles!evaluatee_id(full_name, student_id)
-    `)
+    .select('*')
     .eq('course_id', courseId);
   if (error) { console.error('getAllPitchEvals:', error); return []; }
   return data || [];
@@ -312,18 +308,14 @@ async function jdy_getMultiCourseStudents(courses) {
 }
 
 /**
- * 여러 강의의 발표평가를 한 번에 조회
+ * 여러 강의의 발표평가를 한 번에 조회 (evaluatee_sid 기준)
  * @param {string[]} courseIds
  */
 async function jdy_getMultiCoursePitchEvals(courseIds) {
   if (!courseIds.length) return [];
   const { data, error } = await sb
     .from('jdy_pitch_evaluations')
-    .select(`
-      *,
-      evaluator:jdy_profiles!evaluator_id(full_name, student_id),
-      evaluatee:jdy_profiles!evaluatee_id(full_name, student_id)
-    `)
+    .select('*')
     .in('course_id', courseIds);
   if (error) { console.error('getMultiCoursePitchEvals:', error); return []; }
   return data || [];
@@ -362,9 +354,9 @@ async function jdy_getSectionMembers(section, excludeId = null) {
   return data || [];
 }
 
-/** 분반 전체 발표평가 집계용 조회 (evaluatee_id + 7개 점수만, 평가자 익명) */
+/** 분반 전체 발표평가 집계용 조회 (evaluatee_sid + 7개 점수만, 평가자 익명) */
 async function jdy_getSectionAllPitchEvals(courseId) {
-  const cols = ['evaluatee_id', ...JDY_PITCH_CRITERIA.map(c => c.col)].join(',');
+  const cols = ['evaluatee_sid', ...JDY_PITCH_CRITERIA.map(c => c.col)].join(',');
   const { data, error } = await sb
     .from('jdy_pitch_evaluations')
     .select(cols)
