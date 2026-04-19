@@ -115,12 +115,6 @@
       cursor: default;
       border-color: var(--border);
     }
-    .comment-input {
-      width: 130px;
-      padding: 6px 8px;
-      font-size: .82rem;
-    }
-
     /* 고정 하단 액션바 */
     .eva-actions {
       position: fixed;
@@ -426,15 +420,19 @@ async function _handleSession(session) {
     return;
   }
 
-  // 교수자 → 대시보드 이동 (단, ?section= 파라미터가 있으면 평가 뷰 표시)
+  // 교수자 → 대시보드 이동 (단, ?section= 파라미터가 있으면 열람 뷰)
   const urlSection = new URLSearchParams(location.search).get('section');
-  if (_profile.role === 'instructor' && !urlSection) {
-    location.href = 'dashboard.html';
+  if (_profile.role === 'instructor') {
+    if (!urlSection) { location.href = 'dashboard.html'; return; }
+    // 교수자는 분반 링크 표시, 열람 모드
+    document.getElementById('nav-dash').style.display = 'inline-block';
+    await initEvalView(urlSection);
     return;
   }
 
-  // 평가 뷰 초기화 (URL 분반 우선, 없으면 프로필 분반)
-  await initEvalView(urlSection || _profile.section);
+  // 학생 → 자기 분반만 (URL 파라미터 무시, 보안)
+  document.querySelectorAll('.jdy-nav-sec-link').forEach(a => a.style.display = 'none');
+  await initEvalView(_profile.section);
 }
 
 // ── 뷰 전환 ─────────────────────────────────────────────────
@@ -528,22 +526,51 @@ function renderEvalTable() {
     return;
   }
 
-  // 출석부 학번 → DB 프로필 매핑
+  // 출석부 학번 → DB 프로필 매핑 (본인 포함)
   const sidToProfile = {};
   _members.forEach(m => { if (m.student_id) sidToProfile[m.student_id] = m; });
 
+  // 본인 학번도 매핑 (본인은 _members에서 제외되어 있으므로 별도 처리)
+  const mySid = _profile?.student_id;
+
   tbody.innerHTML = _roster.map(r => {
-    const dbUser    = sidToProfile[r.sid];        // DB 등록된 학생
+    const isSelf    = (mySid && r.sid === mySid);
+    const dbUser    = sidToProfile[r.sid];        // DB 등록된 학생 (본인 제외)
     const uid       = dbUser ? dbUser.id : null;
     const existing  = uid ? _myEvals[uid] : null;
     const submitted = !!existing;
     const registered = !!dbUser;
 
+    // 본인 행 → 평가 불가, "본인" 표시
+    if (isSelf) {
+      const emptyCells = CRITERIA.map(() =>
+        `<td style="text-align:center;"><input type="number" class="score-input" value="" disabled placeholder="-" style="opacity:.3"></td>`
+      ).join('');
+      return `<tr style="background:var(--surface2);">
+        <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.no}</td>
+        <td style="font-weight:600;">${r.name}</td>
+        ${emptyCells}
+        <td style="text-align:center;font-weight:600;color:var(--primary);">-</td>
+        <td style="text-align:center;"><span style="color:var(--primary);font-size:.75rem;font-weight:700;">본인</span></td>
+      </tr>`;
+    }
+
+    // 미등록 학생
+    if (!registered) {
+      const emptyCells = CRITERIA.map(() =>
+        `<td style="text-align:center;"><input type="number" class="score-input" value="" disabled placeholder="-" style="opacity:.4"></td>`
+      ).join('');
+      return `<tr style="opacity:.5">
+        <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.no}</td>
+        <td style="font-weight:600;">${r.name}</td>
+        ${emptyCells}
+        <td style="text-align:center;font-weight:600;color:var(--primary);">-</td>
+        <td style="text-align:center;"><span style="color:var(--text3);font-size:.75rem;">미등록</span></td>
+      </tr>`;
+    }
+
     // 점수 셀
     const scoreCells = CRITERIA.map(c => {
-      if (!registered) {
-        return `<td style="text-align:center;"><input type="number" class="score-input" value="" disabled placeholder="-" style="opacity:.4"></td>`;
-      }
       const val = submitted ? (existing[c.name] ?? '') : '';
       const cls = (val !== '' && val != null) ? ' filled' : '';
 
@@ -558,18 +585,15 @@ function renderEvalTable() {
     }).join('');
 
     // 총점 셀
-    const totalVal = !registered ? '-'
-      : submitted ? computeTotal(existing) : '-';
-    const totalCell = `<td style="text-align:center;font-weight:600;color:var(--primary);" ${uid ? `id="avg-${uid}"` : ''}>${totalVal}</td>`;
+    const totalVal = submitted ? computeTotal(existing) : '-';
+    const totalCell = `<td style="text-align:center;font-weight:600;color:var(--primary);" id="avg-${uid}">${totalVal}</td>`;
 
     // 상태 셀
-    const statusCell = !registered
-      ? `<td style="text-align:center;"><span style="color:var(--text3);font-size:.75rem;">미등록</span></td>`
-      : submitted
-        ? `<td style="text-align:center;"><span style="color:var(--success);font-weight:700;font-size:.82rem;">✓ 제출됨</span></td>`
-        : `<td></td>`;
+    const statusCell = submitted
+      ? `<td style="text-align:center;"><span style="color:var(--success);font-weight:700;font-size:.82rem;">✓ 제출됨</span></td>`
+      : `<td></td>`;
 
-    return `<tr ${uid ? `data-uid="${uid}"` : ''} ${!registered ? 'style="opacity:.5"' : ''}>
+    return `<tr data-uid="${uid}">
       <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.no}</td>
       <td style="font-weight:600;">${r.name}</td>
       ${scoreCells}
@@ -612,12 +636,13 @@ function updateRowTotal(uid) {
 
 // ── 진행률 업데이트 ──────────────────────────────────────────
 function updateProgress() {
-  // roster 기준: DB 등록된 학생 중 평가 완료 수
+  // roster 기준: DB 등록된 학생(본인 제외) 중 평가 완료 수
+  const mySid = _profile?.student_id;
   const sidToProfile = {};
   _members.forEach(m => { if (m.student_id) sidToProfile[m.student_id] = m; });
-  const registered = _roster.filter(r => sidToProfile[r.sid]);
-  const total = registered.length;
-  const done  = registered.filter(r => _myEvals[sidToProfile[r.sid].id]).length;
+  const targets = _roster.filter(r => r.sid !== mySid && sidToProfile[r.sid]);
+  const total = targets.length;
+  const done  = targets.filter(r => _myEvals[sidToProfile[r.sid].id]).length;
   const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
 
   const el = (id) => document.getElementById(id);
@@ -747,7 +772,9 @@ async function saveProfile() {
   jdy_toggleNavAuth(true, _profile);
   jdy_toast('success', `${section}반 등록 완료! 환영합니다, ${name}님 🎉`);
 
-  await initEvalView();
+  // 학생은 분반 링크 숨김
+  document.querySelectorAll('.jdy-nav-sec-link').forEach(a => a.style.display = 'none');
+  await initEvalView(section);
 }
 </script>
 </body>
