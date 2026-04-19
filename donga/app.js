@@ -149,6 +149,17 @@ const JDY_PITCH_CRITERIA = [
   { col: 'score_support_strategy',   label: '지원전략',      max: 10 },
 ];
 
+const JDY_RA_CRITERIA = [
+  { col: 'score_completion',    label: '완성도', max: 10 },
+  { col: 'score_scalability',   label: '확장성', max: 10 },
+  { col: 'score_communication', label: '전달력', max: 10 },
+];
+
+/** 섹션별 평가 기준 반환 */
+function jdy_getCriteria(section) {
+  return section === 'RA' ? JDY_RA_CRITERIA : JDY_PITCH_CRITERIA;
+}
+
 // ============================================================
 // 발표평가 DB 함수
 // ============================================================
@@ -186,8 +197,9 @@ async function jdy_getAllPitchEvalsForCourse(courseId) {
 }
 
 /** 발표평가 총점 계산 */
-function jdy_pitchTotal(ev) {
-  return JDY_PITCH_CRITERIA.reduce((sum, c) => sum + (parseInt(ev[c.col]) || 0), 0);
+function jdy_pitchTotal(ev, criteria) {
+  const cr = criteria || JDY_PITCH_CRITERIA;
+  return cr.reduce((sum, c) => sum + (parseInt(ev[c.col]) || 0), 0);
 }
 
 // ============================================================
@@ -354,9 +366,10 @@ async function jdy_getSectionMembers(section, excludeId = null) {
   return data || [];
 }
 
-/** 분반 전체 발표평가 집계용 조회 (evaluatee_sid + 7개 점수만, 평가자 익명) */
-async function jdy_getSectionAllPitchEvals(courseId) {
-  const cols = ['evaluatee_sid', ...JDY_PITCH_CRITERIA.map(c => c.col)].join(',');
+/** 분반 전체 발표평가 집계용 조회 (evaluatee_sid + 점수 컬럼, 평가자 익명) */
+async function jdy_getSectionAllPitchEvals(courseId, criteria) {
+  const cr = criteria || JDY_PITCH_CRITERIA;
+  const cols = ['evaluatee_sid', ...cr.map(c => c.col)].join(',');
   const { data, error } = await sb
     .from('jdy_pitch_evaluations')
     .select(cols)

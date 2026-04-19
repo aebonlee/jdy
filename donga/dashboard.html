@@ -203,7 +203,7 @@ let _session     = null;
 let _profile     = null;
 let _initialized = false;
 let _courses     = [];   // instructor's courses
-let _activeSec   = 'all'; // 'all' | 'Q1' | 'Q2' | 'Y2' | course_id
+let _activeSec   = 'all'; // 'all' | 'Q1' | 'Q2' | 'Y2' | 'RA' | course_id
 let _rosterAll   = {};   // roster.json 전체 { Q1:[...], Q2:[...], Y2:[...] }
 let _students    = [];   // [{sid, name, no, section?}] — roster 기반
 let _pitchEvals  = [];
@@ -271,7 +271,7 @@ let _studentSection = {}; // sid -> section label
 
 // ── 분반 탭 빌드 ─────────────────────────────────────────
 function buildSectionTabs() {
-  const TAB_COLORS = { Q1:'jdy-sec-tab-Q1', Q2:'jdy-sec-tab-Q2', Y2:'jdy-sec-tab-Y2', all:'jdy-sec-tab-all' };
+  const TAB_COLORS = { Q1:'jdy-sec-tab-Q1', Q2:'jdy-sec-tab-Q2', Y2:'jdy-sec-tab-Y2', RA:'jdy-sec-tab-RA', all:'jdy-sec-tab-all' };
 
   // 전체 탭
   let html = `<button class="jdy-tab jdy-sec-tab-all active" data-sec="all" onclick="loadSectionData('all')">
@@ -329,6 +329,7 @@ async function loadSectionData(secOrId) {
   } else if (['Q1','Q2','Y2','RA'].includes(secOrId)) {
     const list = _rosterAll[secOrId] || [];
     _students = list.map(r => ({ sid: r.sid, name: r.name, no: r.no, section: secOrId }));
+    list.forEach(r => { _studentSection[r.sid] = secOrId; });
     _isAllView = false;
   } else {
     _students = [];
@@ -373,10 +374,16 @@ function updatePitchStats() {
     maxPossible = n * (n > 0 ? n - 1 : 0);
   }
 
-  const rate     = maxPossible > 0 ? Math.round((evN / maxPossible) * 100) : 0;
-  const totalAvg = evN > 0
-    ? ((_pitchEvals.reduce((s, e) => s + jdy_pitchTotal(e), 0)) / evN).toFixed(1)
-    : '-';
+  const rate = maxPossible > 0 ? Math.round((evN / maxPossible) * 100) : 0;
+
+  let totalAvg = '-';
+  if (evN > 0) {
+    const sum = _pitchEvals.reduce((s, e) => {
+      const sec = _studentSection[e.evaluatee_sid] || _activeSec;
+      return s + jdy_pitchTotal(e, jdy_getCriteria(sec));
+    }, 0);
+    totalAvg = (sum / evN).toFixed(1);
+  }
 
   document.getElementById('ps-students').textContent = n;
   document.getElementById('ps-evals').textContent    = evN;
@@ -385,22 +392,32 @@ function updatePitchStats() {
 }
 
 function buildPitchTable() {
+  // 섹션별 평가 기준
+  const criteria = _isAllView ? null : jdy_getCriteria(_activeSec);
+  const maxTotal = criteria ? criteria.reduce((s, c) => s + c.max, 0) : null;
+
   // thead 재구성
-  const secCol = _isAllView ? '<th>분반</th>' : '';
-  document.getElementById('pitch-thead').innerHTML = `<tr>
-    <th>순번</th><th>이름</th><th>학번</th>${secCol}<th>평가수</th>
-    <th>자기이해<br>+적성<br><small style="color:var(--primary)">(20)</small></th>
-    <th>창업<br>아이템<br><small style="color:var(--primary)">(15)</small></th>
-    <th>거시<br>환경<br><small style="color:var(--primary)">(15)</small></th>
-    <th>고객/<br>시장<br><small style="color:var(--primary)">(10)</small></th>
-    <th>수익<br>구조<br><small style="color:var(--primary)">(15)</small></th>
-    <th>실행<br>준비<br><small style="color:var(--primary)">(15)</small></th>
-    <th>지원<br>전략<br><small style="color:var(--primary)">(10)</small></th>
-    <th onclick="pitchSortBy()" style="cursor:pointer;color:var(--primary);">
-      평균총점 ↕<br><small style="color:var(--text3)">(100)</small>
-    </th>
-    <th style="width:48px"></th>
-  </tr>`;
+  if (_isAllView) {
+    document.getElementById('pitch-thead').innerHTML = `<tr>
+      <th>순번</th><th>이름</th><th>학번</th><th>분반</th><th>평가수</th>
+      <th onclick="pitchSortBy()" style="cursor:pointer;color:var(--primary);">
+        평균총점 ↕
+      </th>
+      <th style="width:48px"></th>
+    </tr>`;
+  } else {
+    const criteriaHeaders = criteria.map(c =>
+      `<th>${c.label}<br><small style="color:var(--primary)">(${c.max})</small></th>`
+    ).join('');
+    document.getElementById('pitch-thead').innerHTML = `<tr>
+      <th>순번</th><th>이름</th><th>학번</th><th>평가수</th>
+      ${criteriaHeaders}
+      <th onclick="pitchSortBy()" style="cursor:pointer;color:var(--primary);">
+        평균총점 ↕<br><small style="color:var(--text3)">(${maxTotal})</small>
+      </th>
+      <th style="width:48px"></th>
+    </tr>`;
+  }
 
   // roster 기반: evaluatee_sid로 그룹핑
   const map = {};
@@ -408,15 +425,18 @@ function buildPitchTable() {
   _pitchEvals.forEach(e => { if (e.evaluatee_sid && map[e.evaluatee_sid]) map[e.evaluatee_sid].evals.push(e); });
 
   _pitchRows = Object.values(map).map(({ student, idx, evals }) => {
+    const sec = _studentSection[student.sid] || _activeSec;
+    const crit = jdy_getCriteria(sec);
+    const mt = crit.reduce((s, c) => s + c.max, 0);
     const avgTotal = evals.length
-      ? (evals.reduce((s, e) => s + jdy_pitchTotal(e), 0) / evals.length).toFixed(1)
+      ? (evals.reduce((s, e) => s + jdy_pitchTotal(e, crit), 0) / evals.length).toFixed(1)
       : null;
-    const criteria = {};
-    JDY_PITCH_CRITERIA.forEach(c => {
+    const critAvgs = {};
+    crit.forEach(c => {
       const vals = evals.map(e => e[c.col]).filter(v => v != null);
-      criteria[c.col] = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+      critAvgs[c.col] = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
     });
-    return { student, idx, evals, avgTotal, criteria };
+    return { student, idx, evals, avgTotal, criteria: critAvgs, sectionCriteria: crit, maxTotal: mt };
   });
 
   renderPitchTable();
@@ -425,19 +445,32 @@ function buildPitchTable() {
 function renderPitchTable() {
   const tbody = document.getElementById('pitch-summary-tbody');
   if (!_pitchRows.length) {
-    const cols = 13 + (_isAllView ? 1 : 0);
+    const cols = _isAllView ? 7 : (jdy_getCriteria(_activeSec).length + 6);
     tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:40px;color:var(--text3)">데이터가 없습니다.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = _pitchRows.map(r => {
-    const avg  = r.avgTotal ? parseFloat(r.avgTotal) : null;
+    const avg = r.avgTotal ? parseFloat(r.avgTotal) : null;
+    const mt  = r.maxTotal || 100;
+    const pct = avg != null ? Math.round(avg / mt * 100) : null;
     const chip = avg == null ? '-'
-      : `<span class="score-chip ${avg>=80?'score-high':avg>=60?'score-mid':'score-low'}">${avg}</span>`;
-    const secCell = _isAllView
-      ? `<td class="cell-sec"><span class="jdy-section-badge jdy-section-${_studentSection[r.student.sid] || ''}">${_studentSection[r.student.sid] || '-'}</span></td>`
-      : '';
-    const cells = JDY_PITCH_CRITERIA.map(c => {
+      : `<span class="score-chip ${pct>=80?'score-high':pct>=60?'score-mid':'score-low'}">${avg}</span>`;
+
+    if (_isAllView) {
+      const secBadge = `<span class="jdy-section-badge jdy-section-${_studentSection[r.student.sid] || ''}">${_studentSection[r.student.sid] || '-'}</span>`;
+      return `<tr onclick="openPitchDetail('${r.student.sid}')">
+        <td style="text-align:center">${r.idx}</td>
+        <td style="font-weight:600">${r.student.name || '(미설정)'}</td>
+        <td style="color:var(--text2)">${r.student.sid || '-'}</td>
+        <td class="cell-sec">${secBadge}</td>
+        <td style="text-align:center"><strong>${r.evals.length}</strong>건</td>
+        <td style="text-align:center">${chip}</td>
+        <td style="text-align:center"><span class="detail-arrow"><i class="fa-solid fa-chevron-right"></i></span></td>
+      </tr>`;
+    }
+
+    const cells = r.sectionCriteria.map(c => {
       const v = r.criteria[c.col];
       return `<td style="text-align:center">${v != null ? v : '<span style="color:var(--text3)">-</span>'}</td>`;
     }).join('');
@@ -446,7 +479,6 @@ function renderPitchTable() {
       <td style="text-align:center">${r.idx}</td>
       <td style="font-weight:600">${r.student.name || '(미설정)'}</td>
       <td style="color:var(--text2)">${r.student.sid || '-'}</td>
-      ${secCell}
       <td style="text-align:center"><strong>${r.evals.length}</strong>건</td>
       ${cells}
       <td style="text-align:center">${chip}</td>
@@ -469,7 +501,11 @@ function openPitchDetail(studentSid) {
   const row = _pitchRows.find(r => r.student.sid === studentSid);
   if (!row) return;
 
-  const secLabel = _isAllView ? ` · ${_studentSection[studentSid] || '-'}반` : '';
+  const sec = _studentSection[studentSid] || _activeSec;
+  const criteria = row.sectionCriteria || jdy_getCriteria(sec);
+  const maxTotal = criteria.reduce((s, c) => s + c.max, 0);
+
+  const secLabel = _isAllView ? ` · ${sec}반` : '';
   document.getElementById('pd-name').textContent = (row.student.name || '(미설정)') + secLabel;
   document.getElementById('pd-sid').textContent  = studentSid ? `학번: ${studentSid}` : '';
 
@@ -481,7 +517,7 @@ function openPitchDetail(studentSid) {
   }
 
   // 항목별 평균 점수 카드 + 총점 카드
-  const scoreCards = JDY_PITCH_CRITERIA.map(c => {
+  const scoreCards = criteria.map(c => {
     const vals = row.evals.map(e => e[c.col]).filter(v => v != null);
     const avg  = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
     const pct  = Math.round((avg / c.max) * 100);
@@ -492,27 +528,28 @@ function openPitchDetail(studentSid) {
     </div>`;
   }).join('');
 
+  const avgPct = row.avgTotal ? Math.round(parseFloat(row.avgTotal) / maxTotal * 100) : 0;
   const totalCard = `<div class="pd-score-card pd-total-card">
-    <div class="pd-val">${row.avgTotal}<span class="pd-max">/100</span></div>
-    <div class="pd-gauge"><div class="pd-gauge-fill" style="width:${row.avgTotal}%;background:#2563eb"></div></div>
+    <div class="pd-val">${row.avgTotal}<span class="pd-max">/${maxTotal}</span></div>
+    <div class="pd-gauge"><div class="pd-gauge-fill" style="width:${avgPct}%;background:#2563eb"></div></div>
     <div class="pd-label">평균 총점</div>
   </div>`;
 
   // 개별 평가 테이블
-  const crHeaders = JDY_PITCH_CRITERIA.map(c =>
+  const crHeaders = criteria.map(c =>
     `<th style="white-space:nowrap;font-size:.75rem">${c.label}<br><small style="color:var(--primary)">(${c.max})</small></th>`
   ).join('');
   const evalRows = row.evals.map((e, i) => {
-    const cells = JDY_PITCH_CRITERIA.map(c =>
+    const cells = criteria.map(c =>
       `<td style="text-align:center">${e[c.col] != null ? e[c.col] : '-'}</td>`
     ).join('');
     return `<tr>
       <td style="color:var(--text2)">평가 #${i + 1}</td>
       ${cells}
-      <td style="text-align:center;font-weight:800;color:var(--primary)">${jdy_pitchTotal(e)}</td>
+      <td style="text-align:center;font-weight:800;color:var(--primary)">${jdy_pitchTotal(e, criteria)}</td>
     </tr>`;
   }).join('');
-  const avgCells = JDY_PITCH_CRITERIA.map(c => {
+  const avgCells = criteria.map(c => {
     const vals = row.evals.map(e => e[c.col]).filter(v => v != null);
     const avg  = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : '-';
     return `<td style="text-align:center;background:#eff6ff;font-weight:700;color:var(--primary)">${avg}</td>`;
@@ -528,9 +565,9 @@ function openPitchDetail(studentSid) {
     </div>
     <h4 style="font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--text)">개별 평가 내역 (평가자 익명)</h4>
     <div style="overflow-x:auto">
-      <table class="jdy-table" style="min-width:600px">
+      <table class="jdy-table" style="min-width:${criteria.length <= 4 ? 400 : 600}px">
         <thead><tr><th>구분</th>${crHeaders}
-          <th style="color:var(--primary)">총점<br><small style="font-weight:400;color:var(--text3)">(100)</small></th>
+          <th style="color:var(--primary)">총점<br><small style="font-weight:400;color:var(--text3)">(${maxTotal})</small></th>
         </tr></thead>
         <tbody>
           ${evalRows}
@@ -553,17 +590,33 @@ function closePitchDetail() {
 // ── CSV 내보내기 (발표평가) ───────────────────────────────
 function exportPitchCSV() {
   const secLabel = _isAllView ? '전체' : (_activeSec || '');
-  const header   = ['순번','이름','학번',...(_isAllView?['분반']:[]),'평가수',
-    ...JDY_PITCH_CRITERIA.map(c => c.label), '평균총점'];
-  const rows     = _pitchRows.map(r => [
-    r.idx,
-    r.student.name || '',
-    r.student.sid  || '',
-    ...(_isAllView ? [_studentSection[r.student.sid] || ''] : []),
-    r.evals.length,
-    ...JDY_PITCH_CRITERIA.map(c => r.criteria[c.col] || ''),
-    r.avgTotal || ''
-  ]);
+  let header, rows;
+
+  if (_isAllView) {
+    header = ['순번','이름','학번','분반','평가수','평균총점','만점'];
+    rows = _pitchRows.map(r => [
+      r.idx,
+      r.student.name || '',
+      r.student.sid  || '',
+      _studentSection[r.student.sid] || '',
+      r.evals.length,
+      r.avgTotal || '',
+      r.maxTotal || ''
+    ]);
+  } else {
+    const criteria = jdy_getCriteria(_activeSec);
+    header = ['순번','이름','학번','평가수',
+      ...criteria.map(c => c.label), '평균총점'];
+    rows = _pitchRows.map(r => [
+      r.idx,
+      r.student.name || '',
+      r.student.sid  || '',
+      r.evals.length,
+      ...criteria.map(c => r.criteria[c.col] || ''),
+      r.avgTotal || ''
+    ]);
+  }
+
   const csv  = [header, ...rows].map(r => r.join(',')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
