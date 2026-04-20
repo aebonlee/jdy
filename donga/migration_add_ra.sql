@@ -16,9 +16,9 @@ ALTER TABLE public.jdy_profiles
   CHECK (section IN ('Q1','Q2','Y2','RA'));
 
 -- 3. 진로독서 a반 강의 등록
--- ⚠️ instructor_id를 교수자(radica8566@gmail.com)의 UUID로 교체
+-- ⚠️ instructor_id를 교수자(radical8566@gmail.com)의 UUID로 교체
 -- 아래 쿼리로 UUID 확인:
---   SELECT id FROM public.jdy_profiles WHERE email = 'radica8566@gmail.com';
+--   SELECT id FROM public.jdy_profiles WHERE email = 'radical8566@gmail.com';
 INSERT INTO public.jdy_courses (name, description, semester, year, section, instructor_id, is_active)
 SELECT
   '진로독서 a반',
@@ -29,7 +29,7 @@ SELECT
   id,
   true
 FROM public.jdy_profiles
-WHERE email = 'radica8566@gmail.com'
+WHERE email = 'radical8566@gmail.com'
   AND NOT EXISTS (
     SELECT 1 FROM public.jdy_courses WHERE section = 'RA' AND is_active = true
   );
