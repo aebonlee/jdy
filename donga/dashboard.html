@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>발표평가 대시보드 | 동아방송대</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .score-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .score-high   { background: #dcfce7; color: #15803d; }
+    .score-mid    { background: #fef9c3; color: #854d0e; }
+    .score-low    { background: #fee2e2; color: #b91c1c; }
+    .detail-grid  { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 12px; margin: 16px 0; }
+    .detail-score { background: var(--bg); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+    .detail-score .val  { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+    .detail-score .lbl  { font-size: .7rem; color: var(--text2); margin-top: 2px; }
+    .eval-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      font-size: .875rem;
+    }
+    .eval-item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: .8rem;
+      color: var(--text2);
+    }
+    .eval-comment {
+      background: var(--surface2);
+      border-left: 3px solid var(--primary);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 8px 12px;
+      font-size: .8rem;
+      color: var(--text2);
+      margin-top: 8px;
+    }
+    .export-btn { margin-left: auto; }
+    /* 클릭 가능한 테이블 행 */
+    #pitch-summary-tbody tr { cursor: pointer; transition: background .15s; }
+    #pitch-summary-tbody tr:hover { background: var(--surface2); }
+    .detail-arrow { color: var(--text3); font-size: .8rem; transition: color .15s; }
+    #pitch-summary-tbody tr:hover .detail-arrow { color: var(--primary); }
+    /* 상세 모달 점수 카드 */
+    .pd-score-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .pd-score-card {
+      background: var(--surface2); border-radius: 10px; padding: 14px 10px; text-align: center;
+      border: 1px solid var(--border);
+    }
+    .pd-score-card .pd-val { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
+    .pd-score-card .pd-max { font-size: .7rem; color: var(--text3); font-weight: 400; }
+    .pd-score-card .pd-label { font-size: .7rem; color: var(--text2); margin-top: 4px; }
+    .pd-gauge { height: 5px; background: var(--border); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+    .pd-gauge-fill { height: 100%; border-radius: 3px; background: var(--primary); transition: width .4s ease; }
+    .pd-total-card {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-color: #93c5fd;
+    }
+    .pd-total-card .pd-val { font-size: 1.8rem; }
+    @media (max-width:600px) {
+      .detail-grid { grid-template-columns: repeat(3,1fr); }
+      .pd-score-cards { grid-template-columns: repeat(3,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="jdy-nav">
+  <div class="jdy-nav-inner">
+    <a href="index.html" class="jdy-nav-brand">
+      <i class="fa-solid fa-arrow-left"></i>
+      동아방송대
+    </a>
+    <div class="jdy-nav-links">
+      <a href="index.html"     class="jdy-nav-link">강의 홈</a>
+      <a href="dashboard.html" class="jdy-nav-link active">대시보드</a>
+      <span class="jdy-nav-sec-divider"></span>
+      <a href="index.html?section=Q1" class="jdy-nav-sec-link jdy-sec-Q1">Q1반</a>
+      <a href="index.html?section=Q2" class="jdy-nav-sec-link jdy-sec-Q2">Q2반</a>
+      <a href="index.html?section=Y2" class="jdy-nav-sec-link jdy-sec-Y2">Y2반</a>
+      <a href="index.html?section=RA" class="jdy-nav-sec-link jdy-sec-RA">독서A</a>
+    </div>
+    <!-- 로그인 상태 -->
+    <div id="nav-user" class="jdy-nav-user">
+      <div class="jdy-avatar" id="nav-avatar">?</div>
+      <span class="jdy-role-badge instructor">교수자</span>
+      <span id="nav-name" style="font-size:.875rem;color:var(--text2)"></span>
+      <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signOut()">로그아웃</button>
+    </div>
+  </div>
+</nav>
+
+<div class="jdy-page">
+  <section class="jdy-section">
+    <div class="jdy-container">
+
+      <!-- 페이지 헤더 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="jdy-sub-label">DASHBOARD</div>
+          <h2 style="font-size:1.8rem;font-weight:800;">발표평가 대시보드</h2>
+        </div>
+        <button class="jdy-btn jdy-btn-secondary" onclick="exportPitchCSV()">
+          <i class="fa-solid fa-download"></i> CSV 내보내기
+        </button>
+      </div>
+
+      <!-- 통계 카드 (발표평가 통합) -->
+      <div class="jdy-grid-4" id="stat-cards" style="margin-bottom:32px;">
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">👥</div><div class="jdy-stat-val" id="ps-students">-</div><div class="jdy-stat-label">전체 수강생</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">📋</div><div class="jdy-stat-val" id="ps-evals">-</div><div class="jdy-stat-label">제출된 평가</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">📊</div><div class="jdy-stat-val" id="ps-rate">-</div><div class="jdy-stat-label">평가 완료율</div></div>
+        <div class="jdy-stat-card"><div class="jdy-stat-icon">🏆</div><div class="jdy-stat-val" id="ps-avg">-</div><div class="jdy-stat-label">평균 총점</div></div>
+      </div>
+
+      <!-- 분반 탭 (전체/Q1/Q2/Y2) -->
+      <div class="jdy-tabs" id="section-tabs" style="margin-bottom:16px;"></div>
+
+      <!-- ── 발표평가 집계 영역 ── -->
+      <div id="pitch-dash-area">
+
+        <!-- 발표평가 집계 테이블 -->
+        <div class="jdy-card" style="padding:0;overflow:hidden;">
+          <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);">
+            <h3 style="font-size:1rem;font-weight:700;margin:0;">학생별 발표평가 집계</h3>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="jdy-table" id="pitch-summary-table" style="min-width:900px;">
+              <thead id="pitch-thead">
+                <tr>
+                  <th>순번</th>
+                  <th>이름</th>
+                  <th>학번</th>
+                  <th>평가수</th>
+                  <th>자기이해<br>+적성<br><small style="color:var(--primary)">(20)</small></th>
+                  <th>창업<br>아이템<br><small style="color:var(--primary)">(15)</small></th>
+                  <th>거시<br>환경<br><small style="color:var(--primary)">(15)</small></th>
+                  <th>고객/<br>시장<br><small style="color:var(--primary)">(10)</small></th>
+                  <th>수익<br>구조<br><small style="color:var(--primary)">(15)</small></th>
+                  <th>실행<br>준비<br><small style="color:var(--primary)">(15)</small></th>
+                  <th>지원<br>전략<br><small style="color:var(--primary)">(10)</small></th>
+                  <th onclick="pitchSortBy()" style="cursor:pointer;color:var(--primary);">
+                    평균총점 ↕<br><small style="color:var(--text3)">(100)</small>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="pitch-summary-tbody">
+                <tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text3)">로딩 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /pitch-dash-area -->
+
+    </div>
+  </section>
+
+  <footer class="jdy-footer">
+    <p>직업미래연구소 · 정동엽 박사 | <a href="mailto:newjob4u@naver.com">newjob4u@naver.com</a></p>
+  </footer>
+</div>
+
+<!-- 발표평가 학생 상세 모달 -->
+<div id="pitch-detail-modal" class="jdy-modal-bg" style="display:none">
+  <div class="jdy-modal" style="max-width:780px">
+    <div class="jdy-modal-header">
+      <div>
+        <div class="jdy-modal-title" id="pd-name">학생 이름</div>
+        <div style="font-size:.8rem;color:var(--text2);margin-top:2px;" id="pd-sid"></div>
+      </div>
+      <button class="jdy-modal-close" onclick="closePitchDetail()">✕</button>
+    </div>
+    <div class="jdy-modal-body" id="pd-body" style="padding-bottom:20px;">
+      <!-- 평균 행 + 개별 평가 목록 -->
+    </div>
+    <div class="jdy-modal-footer">
+      <button class="jdy-btn jdy-btn-secondary" onclick="closePitchDetail()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div id="jdy-toast" class="jdy-toast"></div>
+<div id="jdy-loading"><div class="jdy-spinner"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js?v=2"></script>
+<script>
+'use strict';
+
+let _session     = null;
+let _profile     = null;
+let _initialized = false;
+let _courses     = [];   // instructor's courses
+let _activeSec   = 'all'; // 'all' | 'Q1' | 'Q2' | 'Y2' | 'RA' | course_id
+let _rosterAll   = {};   // roster.json 전체 { Q1:[...], Q2:[...], Y2:[...] }
+let _students    = [];   // [{sid, name, no, section?}] — roster 기반
+let _pitchEvals  = [];
+let _pitchRows   = [];
+let _pitchSortAsc = false;
+let _isAllView   = false;
+let _studentSection = {}; // sid -> section label
+
+// ── 초기화 ────────────────────────────────────────────────
+// getSession() 직접 호출 → onAuthStateChange 이벤트 의존 제거
+(async () => {
+  jdy_loading(true);
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    await _initDashboard(session);
+  } catch (err) {
+    console.error('[donga/dashboard] 초기화 오류:', err);
+    jdy_toast('error', '초기화 중 오류가 발생했습니다.');
+  } finally {
+    jdy_loading(false);
+  }
+
+  // 로그아웃 감지
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') location.href = 'index.html';
+  });
+})();
+
+async function _initDashboard(session) {
+  if (!session) { location.href = 'index.html'; return; }
+
+  _session = session;
+  _profile = await jdy_getProfile(session.user.id);
+
+  if (!_profile) {
+    await jdy_upsertProfile({ full_name: jdy_fallbackName(session) });
+    _profile = await jdy_getProfile(session.user.id);
+  }
+
+  if (_profile?.role !== 'instructor') {
+    jdy_toast('error', '교수자 계정만 접근할 수 있습니다.');
+    setTimeout(() => { location.href = 'index.html'; }, 1500);
+    return;
+  }
+
+  jdy_toggleNavAuth(true, _profile);
+
+  const allCourses = await jdy_getCourses(false);
+  _courses = allCourses.filter(c => c.is_active);
+
+  // roster.json 로드
+  _rosterAll = await fetch('roster.json').then(r => r.json()).catch(() => ({}));
+
+  jdy_loading(false);
+
+  if (!_courses.length) {
+    document.getElementById('section-tabs').innerHTML =
+      '<p style="color:var(--text3);font-size:.875rem;">등록된 강의가 없습니다.</p>';
+    document.getElementById('pitch-summary-tbody').innerHTML =
+      '<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text3)">등록된 강의가 없습니다.</td></tr>';
+    return;
+  }
+
+  buildSectionTabs();
+  await loadSectionData('all');
+}
+
+// ── 분반 탭 빌드 ─────────────────────────────────────────
+function buildSectionTabs() {
+  const TAB_COLORS = { Q1:'jdy-sec-tab-Q1', Q2:'jdy-sec-tab-Q2', Y2:'jdy-sec-tab-Y2', RA:'jdy-sec-tab-RA', all:'jdy-sec-tab-all' };
+
+  // 전체 탭
+  let html = `<button class="jdy-tab jdy-sec-tab-all active" data-sec="all" onclick="loadSectionData('all')">
+    <i class="fa-solid fa-layer-group"></i> 전체
+  </button>`;
+
+  // 분반별 탭 (section이 있는 course)
+  const sections = [];
+  _courses.forEach(c => {
+    if (c.section && !sections.find(s => s.sec === c.section)) {
+      sections.push({ sec: c.section, id: c.id });
+    }
+  });
+  // section이 없는 course도 탭으로
+  const noSec = _courses.filter(c => !c.section);
+
+  sections.forEach(s => {
+    const cls = TAB_COLORS[s.sec] || '';
+    html += `<button class="jdy-tab ${cls}" data-sec="${s.sec}" onclick="loadSectionData('${s.sec}')">
+      ${s.sec}반
+    </button>`;
+  });
+
+  noSec.forEach(c => {
+    html += `<button class="jdy-tab" data-sec="${c.id}" onclick="loadSectionData('${c.id}')">
+      ${c.name} <small style="color:var(--text3)">${c.semester}</small>
+    </button>`;
+  });
+
+  document.getElementById('section-tabs').innerHTML = html;
+}
+
+// ── 분반 데이터 로드 (roster.json 기반) ──────────────────
+async function loadSectionData(secOrId) {
+  _activeSec = secOrId;
+
+  document.querySelectorAll('#section-tabs .jdy-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.sec === secOrId)
+  );
+
+  jdy_loading(true);
+
+  _studentSection = {};
+
+  if (secOrId === 'all') {
+    _students = [];
+    ['Q1','Q2','Y2','RA'].forEach(sec => {
+      const list = _rosterAll[sec] || [];
+      list.forEach(r => {
+        _students.push({ sid: r.sid, name: r.name, no: r.no, section: sec });
+        _studentSection[r.sid] = sec;
+      });
+    });
+    _isAllView = true;
+  } else if (['Q1','Q2','Y2','RA'].includes(secOrId)) {
+    const list = _rosterAll[secOrId] || [];
+    _students = list.map(r => ({ sid: r.sid, name: r.name, no: r.no, section: secOrId }));
+    list.forEach(r => { _studentSection[r.sid] = secOrId; });
+    _isAllView = false;
+  } else {
+    _students = [];
+    _isAllView = false;
+  }
+
+  jdy_loading(false);
+  await loadPitchDashData();
+}
+
+// ── 발표평가 대시보드 ─────────────────────────────────────
+async function loadPitchDashData() {
+  jdy_loading(true);
+
+  if (_isAllView) {
+    _pitchEvals = await jdy_getMultiCoursePitchEvals(_courses.map(c => c.id));
+  } else if (['Q1','Q2','Y2','RA'].includes(_activeSec)) {
+    const course = _courses.find(c => c.section === _activeSec);
+    _pitchEvals = course ? await jdy_getAllPitchEvalsForCourse(course.id) : [];
+  } else {
+    _pitchEvals = await jdy_getAllPitchEvalsForCourse(_activeSec);
+  }
+
+  jdy_loading(false);
+  buildPitchTable();
+  updatePitchStats();
+}
+
+function updatePitchStats() {
+  const n   = _students.length;
+  const evN = _pitchEvals.length;
+
+  let maxPossible = 0;
+  if (_isAllView) {
+    const secCount = {};
+    _students.forEach(s => {
+      const sec = _studentSection[s.sid] || '_';
+      secCount[sec] = (secCount[sec] || 0) + 1;
+    });
+    maxPossible = Object.values(secCount).reduce((sum, cnt) => sum + cnt * (cnt - 1), 0);
+  } else {
+    maxPossible = n * (n > 0 ? n - 1 : 0);
+  }
+
+  const rate = maxPossible > 0 ? Math.round((evN / maxPossible) * 100) : 0;
+
+  let totalAvg = '-';
+  if (evN > 0) {
+    const sum = _pitchEvals.reduce((s, e) => {
+      const sec = _studentSection[e.evaluatee_sid] || _activeSec;
+      return s + jdy_pitchTotal(e, jdy_getCriteria(sec));
+    }, 0);
+    totalAvg = (sum / evN).toFixed(1);
+  }
+
+  document.getElementById('ps-students').textContent = n;
+  document.getElementById('ps-evals').textContent    = evN;
+  document.getElementById('ps-rate').textContent     = rate + '%';
+  document.getElementById('ps-avg').textContent      = totalAvg;
+}
+
+function buildPitchTable() {
+  // 섹션별 평가 기준
+  const criteria = _isAllView ? null : jdy_getCriteria(_activeSec);
+  const maxTotal = criteria ? criteria.reduce((s, c) => s + c.max, 0) : null;
+
+  // thead 재구성
+  if (_isAllView) {
+    document.getElementById('pitch-thead').innerHTML = `<tr>
+      <th>순번</th><th>이름</th><th>학번</th><th>분반</th><th>평가수</th>
+      <th onclick="pitchSortBy()" style="cursor:pointer;color:var(--primary);">
+        평균총점 ↕
+      </th>
+      <th style="width:48px"></th>
+    </tr>`;
+  } else {
+    const criteriaHeaders = criteria.map(c =>
+      `<th>${c.label}<br><small style="color:var(--primary)">(${c.max})</small></th>`
+    ).join('');
+    document.getElementById('pitch-thead').innerHTML = `<tr>
+      <th>순번</th><th>이름</th><th>학번</th><th>평가수</th>
+      ${criteriaHeaders}
+      <th onclick="pitchSortBy()" style="cursor:pointer;color:var(--primary);">
+        평균총점 ↕<br><small style="color:var(--text3)">(${maxTotal})</small>
+      </th>
+      <th style="width:48px"></th>
+    </tr>`;
+  }
+
+  // roster 기반: evaluatee_sid로 그룹핑
+  const map = {};
+  _students.forEach((s, i) => { map[s.sid] = { student: s, idx: i + 1, evals: [] }; });
+  _pitchEvals.forEach(e => { if (e.evaluatee_sid && map[e.evaluatee_sid]) map[e.evaluatee_sid].evals.push(e); });
+
+  _pitchRows = Object.values(map).map(({ student, idx, evals }) => {
+    const sec = _studentSection[student.sid] || _activeSec;
+    const crit = jdy_getCriteria(sec);
+    const mt = crit.reduce((s, c) => s + c.max, 0);
+    const avgTotal = evals.length
+      ? (evals.reduce((s, e) => s + jdy_pitchTotal(e, crit), 0) / evals.length).toFixed(1)
+      : null;
+    const critAvgs = {};
+    crit.forEach(c => {
+      const vals = evals.map(e => e[c.col]).filter(v => v != null);
+      critAvgs[c.col] = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+    });
+    return { student, idx, evals, avgTotal, criteria: critAvgs, sectionCriteria: crit, maxTotal: mt };
+  });
+
+  renderPitchTable();
+}
+
+function renderPitchTable() {
+  const tbody = document.getElementById('pitch-summary-tbody');
+  if (!_pitchRows.length) {
+    const cols = _isAllView ? 7 : (jdy_getCriteria(_activeSec).length + 6);
+    tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:40px;color:var(--text3)">데이터가 없습니다.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = _pitchRows.map(r => {
+    const avg = r.avgTotal ? parseFloat(r.avgTotal) : null;
+    const mt  = r.maxTotal || 100;
+    const pct = avg != null ? Math.round(avg / mt * 100) : null;
+    const chip = avg == null ? '-'
+      : `<span class="score-chip ${pct>=80?'score-high':pct>=60?'score-mid':'score-low'}">${avg}</span>`;
+
+    if (_isAllView) {
+      const secBadge = `<span class="jdy-section-badge jdy-section-${_studentSection[r.student.sid] || ''}">${_studentSection[r.student.sid] || '-'}</span>`;
+      return `<tr onclick="openPitchDetail('${r.student.sid}')">
+        <td style="text-align:center">${r.idx}</td>
+        <td style="font-weight:600">${r.student.name || '(미설정)'}</td>
+        <td style="color:var(--text2)">${r.student.sid || '-'}</td>
+        <td class="cell-sec">${secBadge}</td>
+        <td style="text-align:center"><strong>${r.evals.length}</strong>건</td>
+        <td style="text-align:center">${chip}</td>
+        <td style="text-align:center"><span class="detail-arrow"><i class="fa-solid fa-chevron-right"></i></span></td>
+      </tr>`;
+    }
+
+    const cells = r.sectionCriteria.map(c => {
+      const v = r.criteria[c.col];
+      return `<td style="text-align:center">${v != null ? v : '<span style="color:var(--text3)">-</span>'}</td>`;
+    }).join('');
+
+    return `<tr onclick="openPitchDetail('${r.student.sid}')">
+      <td style="text-align:center">${r.idx}</td>
+      <td style="font-weight:600">${r.student.name || '(미설정)'}</td>
+      <td style="color:var(--text2)">${r.student.sid || '-'}</td>
+      <td style="text-align:center"><strong>${r.evals.length}</strong>건</td>
+      ${cells}
+      <td style="text-align:center">${chip}</td>
+      <td style="text-align:center"><span class="detail-arrow"><i class="fa-solid fa-chevron-right"></i></span></td>
+    </tr>`;
+  }).join('');
+}
+
+function pitchSortBy() {
+  _pitchSortAsc = !_pitchSortAsc;
+  _pitchRows.sort((a, b) => {
+    const av = parseFloat(a.avgTotal) || 0;
+    const bv = parseFloat(b.avgTotal) || 0;
+    return _pitchSortAsc ? av - bv : bv - av;
+  });
+  renderPitchTable();
+}
+
+function openPitchDetail(studentSid) {
+  const row = _pitchRows.find(r => r.student.sid === studentSid);
+  if (!row) return;
+
+  const sec = _studentSection[studentSid] || _activeSec;
+  const criteria = row.sectionCriteria || jdy_getCriteria(sec);
+  const maxTotal = criteria.reduce((s, c) => s + c.max, 0);
+
+  const secLabel = _isAllView ? ` · ${sec}반` : '';
+  document.getElementById('pd-name').textContent = (row.student.name || '(미설정)') + secLabel;
+  document.getElementById('pd-sid').textContent  = studentSid ? `학번: ${studentSid}` : '';
+
+  const body = document.getElementById('pd-body');
+  if (!row.evals.length) {
+    body.innerHTML = '<div class="jdy-empty"><p>받은 발표평가가 없습니다.</p></div>';
+    document.getElementById('pitch-detail-modal').style.display = 'flex';
+    return;
+  }
+
+  // 항목별 평균 점수 카드 + 총점 카드
+  const scoreCards = criteria.map(c => {
+    const vals = row.evals.map(e => e[c.col]).filter(v => v != null);
+    const avg  = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+    const pct  = Math.round((avg / c.max) * 100);
+    return `<div class="pd-score-card">
+      <div class="pd-val">${avg ? avg.toFixed(1) : '-'}<span class="pd-max">/${c.max}</span></div>
+      <div class="pd-gauge"><div class="pd-gauge-fill" style="width:${pct}%"></div></div>
+      <div class="pd-label">${c.label}</div>
+    </div>`;
+  }).join('');
+
+  const avgPct = row.avgTotal ? Math.round(parseFloat(row.avgTotal) / maxTotal * 100) : 0;
+  const totalCard = `<div class="pd-score-card pd-total-card">
+    <div class="pd-val">${row.avgTotal}<span class="pd-max">/${maxTotal}</span></div>
+    <div class="pd-gauge"><div class="pd-gauge-fill" style="width:${avgPct}%;background:#2563eb"></div></div>
+    <div class="pd-label">평균 총점</div>
+  </div>`;
+
+  // 개별 평가 테이블
+  const crHeaders = criteria.map(c =>
+    `<th style="white-space:nowrap;font-size:.75rem">${c.label}<br><small style="color:var(--primary)">(${c.max})</small></th>`
+  ).join('');
+  const evalRows = row.evals.map((e, i) => {
+    const cells = criteria.map(c =>
+      `<td style="text-align:center">${e[c.col] != null ? e[c.col] : '-'}</td>`
+    ).join('');
+    return `<tr>
+      <td style="color:var(--text2)">평가 #${i + 1}</td>
+      ${cells}
+      <td style="text-align:center;font-weight:800;color:var(--primary)">${jdy_pitchTotal(e, criteria)}</td>
+    </tr>`;
+  }).join('');
+  const avgCells = criteria.map(c => {
+    const vals = row.evals.map(e => e[c.col]).filter(v => v != null);
+    const avg  = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : '-';
+    return `<td style="text-align:center;background:#eff6ff;font-weight:700;color:var(--primary)">${avg}</td>`;
+  }).join('');
+
+  body.innerHTML = `
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:16px">
+      총 <strong>${row.evals.length}</strong>건 평가 수신
+    </p>
+    <div class="pd-score-cards">
+      ${totalCard}
+      ${scoreCards}
+    </div>
+    <h4 style="font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--text)">개별 평가 내역 (평가자 익명)</h4>
+    <div style="overflow-x:auto">
+      <table class="jdy-table" style="min-width:${criteria.length <= 4 ? 400 : 600}px">
+        <thead><tr><th>구분</th>${crHeaders}
+          <th style="color:var(--primary)">총점<br><small style="font-weight:400;color:var(--text3)">(${maxTotal})</small></th>
+        </tr></thead>
+        <tbody>
+          ${evalRows}
+          <tr style="border-top:2px solid var(--primary)">
+            <td style="background:#eff6ff;font-weight:700;color:var(--primary)">평균</td>
+            ${avgCells}
+            <td style="text-align:center;background:#eff6ff;font-weight:800;color:var(--primary)">${row.avgTotal}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+
+  document.getElementById('pitch-detail-modal').style.display = 'flex';
+}
+
+function closePitchDetail() {
+  document.getElementById('pitch-detail-modal').style.display = 'none';
+}
+
+// ── CSV 내보내기 (발표평가) ───────────────────────────────
+function exportPitchCSV() {
+  const secLabel = _isAllView ? '전체' : (_activeSec || '');
+  let header, rows;
+
+  if (_isAllView) {
+    header = ['순번','이름','학번','분반','평가수','평균총점','만점'];
+    rows = _pitchRows.map(r => [
+      r.idx,
+      r.student.name || '',
+      r.student.sid  || '',
+      _studentSection[r.student.sid] || '',
+      r.evals.length,
+      r.avgTotal || '',
+      r.maxTotal || ''
+    ]);
+  } else {
+    const criteria = jdy_getCriteria(_activeSec);
+    header = ['순번','이름','학번','평가수',
+      ...criteria.map(c => c.label), '평균총점'];
+    rows = _pitchRows.map(r => [
+      r.idx,
+      r.student.name || '',
+      r.student.sid  || '',
+      r.evals.length,
+      ...criteria.map(c => r.criteria[c.col] || ''),
+      r.avgTotal || ''
+    ]);
+  }
+
+  const csv  = [header, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `발표평가_집계_${secLabel}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  jdy_toast('success', 'CSV 다운로드 완료');
+}
+</script>
+</body>
+</html>

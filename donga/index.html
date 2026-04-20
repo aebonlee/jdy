@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>발표평가 | 동아방송대</title>
+  <meta name="description" content="동아방송대학교 정동엽 교수 강의 발표평가 시스템.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── 로그인 뷰 ── */
+    .login-wrap {
+      min-height: calc(100vh - var(--navbar-h));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+      background: var(--surface2);
+    }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+    .login-card h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .login-card p {
+      font-size: .875rem;
+      color: var(--text2);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    /* ── 평가 뷰 ── */
+    .eva-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .eva-head-info { flex: 1; min-width: 200px; }
+    .eva-progress { min-width: 220px; }
+    .eva-progress-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: .875rem;
+      margin-bottom: 6px;
+      color: var(--text2);
+    }
+    .eva-progress-label strong { color: var(--primary); font-weight: 700; }
+    .eva-prog-bar {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .eva-prog-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 4px;
+      transition: width .4s ease;
+    }
+
+    /* 완료 배너 */
+    .submitted-banner {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      color: #15803d;
+      font-weight: 600;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    /* 평가 테이블 래퍼 */
+    .eva-wrap {
+      overflow-x: auto;
+      border-radius: 0;
+    }
+
+    /* 점수 입력 */
+    .score-input {
+      width: 54px;
+      padding: 6px 4px;
+      text-align: center;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-size: .9rem;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color .15s, background .15s;
+      -moz-appearance: textfield;
+    }
+    .score-input::-webkit-outer-spin-button,
+    .score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .score-input:focus { outline: none; border-color: var(--primary); }
+    .score-input.filled { border-color: var(--primary); background: #eff6ff; }
+    .score-input[readonly] {
+      background: var(--surface2);
+      color: var(--text2);
+      cursor: default;
+      border-color: var(--border);
+    }
+    /* 고정 하단 액션바 */
+    .eva-actions {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      z-index: 200;
+      box-shadow: 0 -4px 20px rgba(0,0,0,.07);
+    }
+
+    /* 페이지 하단 여백 (액션바 가림 방지) */
+    .has-action-bar { padding-bottom: 76px; }
+
+    /* 섹션 배지 */
+    .jdy-section-badge {
+      display: inline-block;
+      font-size: .75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 100px;
+      margin-bottom: 8px;
+      border: 1.5px solid transparent;
+    }
+    .jdy-section-Q1 { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .jdy-section-Q2 { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+    .jdy-section-Y2 { background: #faf5ff; color: #7c3aed; border-color: #ddd6fe; }
+    .jdy-section-RA { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
+
+    @media (max-width: 640px) {
+      .login-card { padding: 28px 20px; }
+      .eva-actions { padding: 10px 16px; }
+      .eva-head { gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────── -->
+<nav class="jdy-nav">
+  <div class="jdy-nav-inner">
+    <a href="../" class="jdy-nav-brand">
+      <i class="fa-solid fa-house"></i>
+      직업미래연구소
+      <span>/ 동아방송대</span>
+    </a>
+    <div class="jdy-nav-links">
+      <a href="index.html" class="jdy-nav-link active">강의 홈</a>
+      <a href="dashboard.html" class="jdy-nav-link" id="nav-dash" style="display:none">대시보드</a>
+      <span class="jdy-nav-sec-divider"></span>
+      <a href="index.html?section=Q1" class="jdy-nav-sec-link jdy-sec-Q1">Q1반</a>
+      <a href="index.html?section=Q2" class="jdy-nav-sec-link jdy-sec-Q2">Q2반</a>
+      <a href="index.html?section=Y2" class="jdy-nav-sec-link jdy-sec-Y2">Y2반</a>
+      <a href="index.html?section=RA" class="jdy-nav-sec-link jdy-sec-RA">독서A</a>
+    </div>
+    <!-- 로그인 상태 -->
+    <div id="nav-user" class="jdy-nav-user" style="display:none">
+      <div class="jdy-avatar" id="nav-avatar">?</div>
+      <span id="nav-name" style="font-size:.875rem;color:var(--text2)"></span>
+      <button class="jdy-btn jdy-btn-secondary jdy-btn-sm" onclick="jdy_signOut()">로그아웃</button>
+    </div>
+    <!-- 비로그인 -->
+    <div id="nav-guest" style="display:none">
+      <button class="jdy-btn jdy-btn-primary jdy-btn-sm" onclick="jdy_openAuthModal('login')">
+        <i class="fa-solid fa-right-to-bracket"></i> 로그인
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── 비로그인 뷰 ─────────────────────────────────────────── -->
+<div id="view-guest" style="display:none">
+  <div class="jdy-page">
+    <div class="login-wrap">
+      <div class="login-card">
+        <div style="font-size:2.5rem;margin-bottom:12px;">🎓</div>
+        <h2>동아방송대 발표평가</h2>
+        <p>구글 또는 카카오 계정으로 로그인하면<br>발표평가에 바로 참여할 수 있습니다.</p>
+
+        <button class="jdy-btn jdy-btn-google jdy-btn-full" onclick="jdy_signInGoogle()" style="margin-bottom:10px;">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+          Google로 시작하기
+        </button>
+
+        <div class="jdy-auth-divider">또는</div>
+
+        <button class="jdy-btn jdy-btn-kakao jdy-btn-full" onclick="jdy_signInKakao()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919" style="flex-shrink:0">
+            <path d="M12 3C6.48 3 2 6.69 2 11.25c0 2.89 1.74 5.42 4.36 6.96l-1.11 4.09 4.73-3.12c.63.09 1.28.14 1.95.14 5.52 0 10-3.69 10-8.24C21.93 6.69 17.52 3 12 3z"/>
+          </svg>
+          카카오로 시작하기
+        </button>
+
+        <p style="font-size:.73rem;color:var(--text3);margin-top:20px;line-height:1.5;">
+          처음 이용 시 자동으로 계정이 생성됩니다.<br>
+          로그인과 회원가입은 동일한 절차입니다.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 평가 뷰 (로그인 학생) ──────────────────────────────── -->
+<div id="view-eval" style="display:none">
+  <div class="jdy-page has-action-bar">
+    <section class="jdy-section" style="padding-top:40px;padding-bottom:40px;">
+      <div class="jdy-container">
+
+        <!-- 헤더 -->
+        <div class="eva-head">
+          <div class="eva-head-info">
+            <span id="section-badge" class="jdy-section-badge" style="display:none"></span>
+            <h2 class="jdy-section-title" id="course-name" style="font-size:1.5rem;margin-bottom:6px;">-</h2>
+            <p style="font-size:.875rem;color:var(--text2);">
+              같은 분반 동료의 발표를 평가해주세요. 평가자는 공개되지 않습니다.
+            </p>
+          </div>
+          <div class="eva-progress">
+            <div class="eva-progress-label">
+              <span>평가 진행률</span>
+              <strong><span id="prog-done">0</span>/<span id="prog-total">0</span></strong>
+            </div>
+            <div class="eva-prog-bar">
+              <div class="eva-prog-fill" id="prog-fill" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 완료 배너 (제출 후 표시) -->
+        <div id="submitted-banner" class="submitted-banner" style="display:none">
+          ✅ 모든 발표평가가 완료되었습니다!
+        </div>
+
+        <!-- 평가 입력 테이블 -->
+        <div class="jdy-card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+          <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:700;font-size:1rem;">발표평가 입력</div>
+              <div style="font-size:.8rem;color:var(--text2);margin-top:2px;" id="eval-desc">각 항목의 배점에 맞게 점수를 입력하세요 (총 100점)</div>
+            </div>
+          </div>
+          <div class="eva-wrap">
+            <table class="jdy-table" id="eval-table" style="min-width:960px;border-radius:0;">
+              <thead>
+                <tr>
+                  <th>순번</th>
+                  <th>이름</th>
+                  <th>자기이해<br>+적성<br><small style="color:var(--primary);font-weight:400">(20)</small></th>
+                  <th>창업<br>아이템<br><small style="color:var(--primary);font-weight:400">(15)</small></th>
+                  <th>거시<br>환경<br><small style="color:var(--primary);font-weight:400">(15)</small></th>
+                  <th>고객/<br>시장<br><small style="color:var(--primary);font-weight:400">(10)</small></th>
+                  <th>수익<br>구조<br><small style="color:var(--primary);font-weight:400">(15)</small></th>
+                  <th>실행<br>준비<br><small style="color:var(--primary);font-weight:400">(15)</small></th>
+                  <th>지원<br>전략<br><small style="color:var(--primary);font-weight:400">(10)</small></th>
+                  <th>총점<br><small style="color:var(--text3);font-weight:400">(100)</small></th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody id="eval-tbody">
+                <tr>
+                  <td colspan="20" style="text-align:center;padding:48px;">
+                    <div class="jdy-spinner"></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <footer class="jdy-footer" style="margin-top:48px;">
+          <p>직업미래연구소 · 정동엽 박사 | <a href="mailto:newjob4u@naver.com">newjob4u@naver.com</a></p>
+        </footer>
+
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ── 프로필 완성 모달 (최초 로그인) ────────────────────── -->
+<div id="profile-modal" class="jdy-modal-bg" style="display:none">
+  <div class="jdy-modal">
+    <div class="jdy-modal-header">
+      <span class="jdy-modal-title">프로필 완성</span>
+    </div>
+    <div class="jdy-modal-body">
+      <p style="font-size:.875rem;color:var(--text2);margin-bottom:20px;">
+        처음 이용하시나요? 아래 정보를 입력하면 발표평가에 참여할 수 있습니다.
+      </p>
+      <form id="profile-form" onsubmit="return false;">
+        <div class="jdy-form-group">
+          <label class="jdy-label">이름 *</label>
+          <input class="jdy-input" type="text" id="pf-name" required placeholder="홍길동">
+        </div>
+        <div class="jdy-form-group">
+          <label class="jdy-label">학번 *</label>
+          <input class="jdy-input" type="text" id="pf-sid" required placeholder="예: 2024001">
+        </div>
+        <div class="jdy-form-group">
+          <label class="jdy-label">분반 *</label>
+          <select class="jdy-select" id="pf-section" required>
+            <option value="">- 분반 선택 -</option>
+            <option value="Q1">Q1반</option>
+            <option value="Q2">Q2반</option>
+            <option value="Y2">Y2반</option>
+            <option value="RA">진로독서 a반</option>
+          </select>
+          <p style="font-size:.75rem;color:var(--text3);margin-top:6px;">
+            <i class="fa-solid fa-circle-info"></i> 선택한 분반 강의에 자동으로 등록됩니다.
+          </p>
+        </div>
+      </form>
+    </div>
+    <div class="jdy-modal-footer">
+      <button class="jdy-btn jdy-btn-primary" onclick="saveProfile()">저장하고 시작하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 고정 하단 액션바 ───────────────────────────────────── -->
+<div class="eva-actions" id="eval-actions" style="display:none">
+  <button class="jdy-btn jdy-btn-primary" onclick="submitAllEvals()">
+    <i class="fa-solid fa-paper-plane"></i> 최종 제출
+  </button>
+</div>
+
+<div id="jdy-toast" class="jdy-toast"></div>
+<div id="jdy-loading"><div class="jdy-spinner"></div></div>
+
+<!-- ── Scripts ─────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js?v=2"></script>
+<script>
+'use strict';
+
+let _session     = null;
+let _profile     = null;
+let _initialized = false;
+let _course      = null;
+let _roster      = [];   // 출석부 명단 [{no, sid, name}, ...]
+let _myEvals     = {};   // evaluatee_sid → eval row
+
+// 발표평가 항목 (app.js 기준 - initEvalView에서 섹션별로 재설정)
+let CRITERIA = JDY_PITCH_CRITERIA.map(c => ({ name: c.col, label: c.label, max: c.max }));
+
+// ── 초기화 ──────────────────────────────────────────────────
+// getSession() 직접 호출 → onAuthStateChange 이벤트 구독 오버헤드 없이 즉시 실행
+(async () => {
+  jdy_loading(true);
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    await _handleSession(session);
+  } catch (err) {
+    console.error('[donga/index] 초기화 오류:', err);
+    jdy_toast('error', '초기화 중 오류가 발생했습니다.');
+  } finally {
+    jdy_loading(false);
+  }
+
+  // OAuth redirect 후 SIGNED_IN / 로그아웃 SIGNED_OUT 처리
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && !_session) {
+      // OAuth 콜백 (첫 번째 방문 시 getSession이 빈 경우)
+      try {
+        jdy_loading(true);
+        await _handleSession(session);
+      } catch (err) {
+        console.error('[donga/index] auth change 오류:', err);
+      } finally {
+        jdy_loading(false);
+      }
+    } else if (event === 'SIGNED_OUT') {
+      _session = null; _profile = null;
+      showView('guest');
+      jdy_toggleNavAuth(false);
+    }
+  });
+})();
+
+async function _handleSession(session) {
+  if (!session) {
+    showView('guest');
+    jdy_toggleNavAuth(false);
+    return;
+  }
+
+  _session = session;
+  _profile = await jdy_getProfile(session.user.id);
+
+  // 첫 OAuth 로그인 → 프로필 자동 생성
+  if (!_profile) {
+    const { error: initErr } = await jdy_upsertProfile({ full_name: jdy_fallbackName(session) });
+    if (initErr) console.error('[_handleSession] 프로필 초기 생성 실패:', initErr);
+    _profile = await jdy_getProfile(session.user.id);
+  }
+
+  jdy_toggleNavAuth(true, _profile);
+
+  // 교수자 → 대시보드 이동 (단, ?section= 파라미터가 있으면 열람 뷰)
+  const urlSection = new URLSearchParams(location.search).get('section');
+  if (_profile.role === 'instructor') {
+    if (!urlSection) { location.href = 'dashboard.html'; return; }
+    // 교수자는 분반 링크 표시, 열람 모드
+    document.getElementById('nav-dash').style.display = 'inline-block';
+    await initEvalView(urlSection);
+    return;
+  }
+
+  // 프로필 미완성 → 모달 즉시 표시 (학생 전용)
+  if (!_profile?.full_name || !_profile?.student_id || !_profile?.section) {
+    showView('eval');
+    document.getElementById('profile-modal').style.display = 'flex';
+    return;
+  }
+
+  // 학생 → 자기 분반만 (URL 파라미터 무시, 보안)
+  document.querySelectorAll('.jdy-nav-sec-link').forEach(a => a.style.display = 'none');
+  await initEvalView(_profile.section);
+}
+
+// ── 뷰 전환 ─────────────────────────────────────────────────
+function showView(which) {
+  document.getElementById('view-guest').style.display = which === 'guest' ? 'block' : 'none';
+  document.getElementById('view-eval').style.display  = which === 'eval'  ? 'block' : 'none';
+}
+
+// ── 평가 뷰 초기화 ────────────────────────────────────────
+async function initEvalView(section) {
+  showView('eval');
+
+  // 섹션별 평가 기준 설정
+  const critSrc = jdy_getCriteria(section);
+  CRITERIA = critSrc.map(c => ({ name: c.col, label: c.label, max: c.max }));
+  const totalMax = CRITERIA.reduce((s, c) => s + c.max, 0);
+  const colCount = CRITERIA.length + 4; // 순번, 이름, 총점, 상태
+
+  // 동적 thead 생성
+  const theadThs = CRITERIA.map(c =>
+    `<th>${c.label}<br><small style="color:var(--primary);font-weight:400">(${c.max})</small></th>`
+  ).join('');
+  document.querySelector('#eval-table thead').innerHTML = `<tr>
+    <th>순번</th><th>이름</th>
+    ${theadThs}
+    <th>총점<br><small style="color:var(--text3);font-weight:400">(${totalMax})</small></th>
+    <th>상태</th>
+  </tr>`;
+
+  // 테이블 설명 및 너비 업데이트
+  const descEl = document.getElementById('eval-desc');
+  if (descEl) descEl.textContent = `각 항목의 배점에 맞게 점수를 입력하세요 (총 ${totalMax}점)`;
+  document.getElementById('eval-table').style.minWidth = (CRITERIA.length <= 4 ? 600 : 960) + 'px';
+
+  const userId = _session.user.id;
+
+  updateHeader(null, section);
+
+  // 현재 분반 nav 링크 활성화
+  document.querySelectorAll('.jdy-nav-sec-link').forEach(a => {
+    a.classList.toggle('active', a.href.includes('section=' + section));
+  });
+
+  // ① roster.json + 강의 동시 로드
+  const rosterPromise  = fetch('roster.json').then(r => r.json()).catch(() => ({}));
+  const coursePromise   = jdy_getActiveCourseBySection(section);
+
+  const [rosterAll, course] = await Promise.all([rosterPromise, coursePromise]);
+
+  _roster  = rosterAll[section] || [];
+  _course  = course;
+
+  if (!_course) {
+    document.getElementById('eval-tbody').innerHTML =
+      `<tr><td colspan="${colCount}" style="text-align:center;padding:48px;color:var(--text3);">
+        <div class="jdy-empty-icon">📭</div>
+        <p>활성 강의를 찾을 수 없습니다.<br>교수자에게 문의하세요.</p>
+      </td></tr>`;
+    updateHeader(null, section);
+    return;
+  }
+
+  updateHeader(_course, section);
+
+  // ② 평가 조회 (Supabase) — evaluatee_sid 기준
+  const evals = await jdy_getMyPitchEvals(_course.id, userId);
+  _myEvals = {};
+  evals.forEach(e => { if (e.evaluatee_sid) _myEvals[e.evaluatee_sid] = e; });
+
+  renderEvalTable();
+  updateProgress();
+
+  // 모두 완료된 경우 → 배너
+  const mySid = _profile?.student_id;
+  const others = _roster.filter(r => r.sid !== mySid);
+  const allDone = others.length > 0 && others.every(r => _myEvals[r.sid]);
+  if (allDone) {
+    showSubmittedBanner();
+  } else {
+    document.getElementById('eval-actions').style.display = 'flex';
+  }
+}
+
+// ── 헤더 업데이트 ────────────────────────────────────────────
+function updateHeader(course, section) {
+  const nameEl   = document.getElementById('course-name');
+  const badgeEl  = document.getElementById('section-badge');
+
+  if (nameEl)  nameEl.textContent  = course?.name || '강의 로드 중...';
+  if (badgeEl && section) {
+    badgeEl.textContent  = `${section}반`;
+    badgeEl.className    = `jdy-section-badge jdy-section-${section}`;
+    badgeEl.style.display = 'inline-block';
+  }
+}
+
+// ── 평가 테이블 렌더 ─────────────────────────────────────────
+function renderEvalTable() {
+  const tbody = document.getElementById('eval-tbody');
+
+  if (!_roster.length) {
+    tbody.innerHTML =
+      `<tr><td colspan="${CRITERIA.length + 4}" style="text-align:center;padding:48px;color:var(--text3);">
+        <div class="jdy-empty-icon">👥</div>
+        <p>출석부 명단을 불러올 수 없습니다.</p>
+      </td></tr>`;
+    return;
+  }
+
+  const mySid = _profile?.student_id;
+
+  tbody.innerHTML = _roster.map(r => {
+    const isSelf    = (mySid && r.sid === mySid);
+    const existing  = _myEvals[r.sid];       // evaluatee_sid 기준 조회
+    const submitted = !!existing;
+
+    // 본인 행 → 평가 불가, "본인" 표시
+    if (isSelf) {
+      const emptyCells = CRITERIA.map(() =>
+        `<td style="text-align:center;"><input type="number" class="score-input" value="" disabled placeholder="-" style="opacity:.3"></td>`
+      ).join('');
+      return `<tr style="background:var(--surface2);">
+        <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.no}</td>
+        <td style="font-weight:600;">${r.name}</td>
+        ${emptyCells}
+        <td style="text-align:center;font-weight:600;color:var(--primary);">-</td>
+        <td style="text-align:center;"><span style="color:var(--primary);font-size:.75rem;font-weight:700;">본인</span></td>
+      </tr>`;
+    }
+
+    // 점수 셀 — DB 등록 여부와 무관하게 모든 학생에게 입력 활성화
+    const scoreCells = CRITERIA.map(c => {
+      const val = submitted ? (existing[c.name] ?? '') : '';
+      const cls = (val !== '' && val != null) ? ' filled' : '';
+
+      if (submitted) {
+        return `<td style="text-align:center;"><input type="number" class="score-input filled" value="${val}" readonly></td>`;
+      }
+      return `<td style="text-align:center;"><input type="number" class="score-input${cls}"
+        min="0" max="${c.max}" value="${val !== '' ? val : ''}"
+        data-uid="${r.sid}" data-col="${c.name}" data-max="${c.max}"
+        oninput="onScoreInput(this)"
+        placeholder="-"></td>`;
+    }).join('');
+
+    // 총점 셀
+    const totalVal = submitted ? computeTotal(existing) : '-';
+    const totalCell = `<td style="text-align:center;font-weight:600;color:var(--primary);" id="avg-${r.sid}">${totalVal}</td>`;
+
+    // 상태 셀
+    const statusCell = submitted
+      ? `<td style="text-align:center;"><span style="color:var(--success);font-weight:700;font-size:.82rem;">✓ 제출됨</span></td>`
+      : `<td></td>`;
+
+    return `<tr data-uid="${r.sid}">
+      <td style="text-align:center;color:var(--text3);font-size:.85rem;">${r.no}</td>
+      <td style="font-weight:600;">${r.name}</td>
+      ${scoreCells}
+      ${totalCell}
+      ${statusCell}
+    </tr>`;
+  }).join('');
+}
+
+// ── 총점 계산 ────────────────────────────────────────────────
+function computeTotal(ev) {
+  const vals = CRITERIA.map(c => ev[c.name]).filter(v => v != null && v !== '');
+  if (!vals.length) return '-';
+  return vals.reduce((a, b) => a + Number(b), 0);
+}
+
+
+
+// ── 점수 입력 핸들러 ─────────────────────────────────────────
+function onScoreInput(input) {
+  const maxVal = parseInt(input.dataset.max) || 100;
+  let v = parseInt(input.value);
+  if (input.value !== '' && v > maxVal) { input.value = maxVal; v = maxVal; }
+  if (input.value !== '' && v < 0)      { input.value = 0; v = 0; }
+  input.classList.toggle('filled', input.value !== '');
+  updateRowTotal(input.dataset.uid);
+}
+
+function updateRowTotal(uid) {
+  const row = document.querySelector(`tr[data-uid="${uid}"]`);
+  if (!row) return;
+  let total = 0, hasAny = false;
+  CRITERIA.forEach(c => {
+    const inp = row.querySelector(`.score-input[data-col="${c.name}"]`);
+    if (inp && inp.value !== '') { total += Number(inp.value); hasAny = true; }
+  });
+  const totalEl = document.getElementById(`avg-${uid}`);
+  if (totalEl) totalEl.textContent = hasAny ? total : '-';
+}
+
+// ── 진행률 업데이트 ──────────────────────────────────────────
+function updateProgress() {
+  const mySid = _profile?.student_id;
+  const targets = _roster.filter(r => r.sid !== mySid);
+  const total = targets.length;
+  const done  = targets.filter(r => _myEvals[r.sid]).length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  const el = (id) => document.getElementById(id);
+  if (el('prog-done'))  el('prog-done').textContent  = done;
+  if (el('prog-total')) el('prog-total').textContent = total;
+  if (el('prog-fill'))  el('prog-fill').style.width  = pct + '%';
+}
+
+// ── 최종 제출 ────────────────────────────────────────────────
+async function submitAllEvals() {
+  if (!_course) { jdy_toast('error', '강의 정보를 불러올 수 없습니다.'); return; }
+
+  const mySid = _profile?.student_id;
+  const batch = [];
+  let missingName = null;
+
+  for (const r of _roster) {
+    if (r.sid === mySid) continue;          // 본인 스킵
+    if (_myEvals[r.sid]) continue;          // 이미 제출
+
+    const row = document.querySelector(`tr[data-uid="${r.sid}"]`);
+    if (!row) continue;
+
+    const ev = { evaluatee_sid: r.sid, course_id: _course.id };
+    let allFilled = true;
+
+    for (const c of CRITERIA) {
+      const inp = row.querySelector(`.score-input[data-col="${c.name}"]`);
+      const val = inp ? parseInt(inp.value) : NaN;
+      if (isNaN(val) || val < 0 || val > c.max) {
+        allFilled = false;
+        missingName = r.name;
+        break;
+      }
+      ev[c.name] = val;
+    }
+
+    if (!allFilled) break;
+    batch.push(ev);
+  }
+
+  if (missingName) {
+    jdy_toast('error', `'${missingName}'의 모든 항목을 배점에 맞게 입력해주세요.`);
+    return;
+  }
+
+  // 이미 전부 완료 상태
+  const others = _roster.filter(r => r.sid !== mySid);
+  if (!batch.length && others.length > 0 && others.every(r => _myEvals[r.sid])) {
+    jdy_toast('success', '이미 모든 평가가 제출되어 있습니다.');
+    return;
+  }
+
+  if (!batch.length) {
+    jdy_toast('error', '제출할 평가 데이터가 없습니다.');
+    return;
+  }
+
+  if (!confirm(`${batch.length}명에 대한 발표평가를 최종 제출하시겠습니까?\n제출 후에는 수정이 불가합니다.`)) return;
+
+  jdy_loading(true);
+
+  const session = await jdy_getSession();
+  const rows = batch.map(e => ({ ...e, evaluator_id: session.user.id }));
+  const { error } = await sb
+    .from('jdy_pitch_evaluations')
+    .upsert(rows, { onConflict: 'evaluator_id,evaluatee_sid,course_id' });
+
+  if (error) {
+    jdy_loading(false);
+    jdy_toast('error', '제출 실패: ' + error.message);
+    return;
+  }
+
+  // 평가 캐시 갱신
+  const freshEvals = await jdy_getMyPitchEvals(_course.id, session.user.id);
+  _myEvals = {};
+  freshEvals.forEach(e => { if (e.evaluatee_sid) _myEvals[e.evaluatee_sid] = e; });
+
+  jdy_loading(false);
+
+  jdy_toast('success', `${batch.length}명 발표평가 제출 완료!`);
+  renderEvalTable();
+  updateProgress();
+  showSubmittedBanner();
+}
+
+// ── 완료 배너 표시 ───────────────────────────────────────────
+function showSubmittedBanner() {
+  const banner  = document.getElementById('submitted-banner');
+  const actions = document.getElementById('eval-actions');
+  if (banner)  banner.style.display  = 'block';
+  if (actions) actions.style.display = 'none';
+}
+
+// ── 프로필 저장 (분반 선택 + 자동 수강신청) ─────────────────
+async function saveProfile() {
+  const name    = document.getElementById('pf-name').value.trim();
+  const sid     = document.getElementById('pf-sid').value.trim();
+  const section = document.getElementById('pf-section').value;
+  if (!name)    { jdy_toast('error', '이름을 입력해주세요.');  return; }
+  if (!sid)     { jdy_toast('error', '학번을 입력해주세요.');  return; }
+  if (!section) { jdy_toast('error', '분반을 선택해주세요.'); return; }
+
+  jdy_loading(true);
+
+  // _session 직접 사용 (jdy_getSession() 재호출 없이 확실한 세션으로 upsert)
+  const upsertPayload = {
+    id:         _session.user.id,
+    email:      _session.user.email || '',  // Kakao 등 email null 대비
+    full_name:  name,
+    student_id: sid,
+    section:    section,
+  };
+  const { error: pErr } = await sb
+    .from('jdy_profiles')
+    .upsert(upsertPayload, { onConflict: 'id' });
+
+  if (pErr) {
+    jdy_loading(false);
+    console.error('[saveProfile] upsert 실패:', pErr);
+    jdy_toast('error', '프로필 저장 실패: ' + (pErr.message || JSON.stringify(pErr)));
+    return;
+  }
+
+  _profile = await jdy_getProfile(_session.user.id);
+  jdy_loading(false);
+
+  document.getElementById('profile-modal').style.display = 'none';
+  jdy_toggleNavAuth(true, _profile);
+  jdy_toast('success', `${section}반 등록 완료! 환영합니다, ${name}님 🎉`);
+
+  // 학생은 분반 링크 숨김
+  document.querySelectorAll('.jdy-nav-sec-link').forEach(a => a.style.display = 'none');
+  await initEvalView(section);
+}
+</script>
+</body>
+</html>
