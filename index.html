@@ -644,7 +644,7 @@
                        border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1rem;
                        display:flex;align-items:center;justify-content:center;">✕</button>
         <div style="font-size:2rem;margin-bottom:12px;">🎓</div>
-        <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:8px;" id="main-modal-title">동아방송대 로그인</h3>
+        <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:8px;" id="main-modal-title">로그인</h3>
         <p style="font-size:.875rem;color:#64748b;margin-bottom:24px;">소셜 계정으로 간편하게 시작하세요.</p>
         <button onclick="mainSignInGoogle()"
                 style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
@@ -672,37 +672,83 @@
       'use strict';
       const SB_URL = 'https://hcmgdztsgjvzcyxyayaj.supabase.co';
       const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjbWdkenRzZ2p2emN5eHlheWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzU4ODcsImV4cCI6MjA4NzAxMTg4N30.gznaPzY1l8qDAPsEyYNR9KS7f7VqS3xaw-_2HTSwSZw';
-      const sbMain = window.supabase.createClient(SB_URL, SB_KEY);
+      const SSO_KEY = 'dreamit_sso';
+      const sbMain = window.supabase.createClient(SB_URL, SB_KEY, {
+        auth: { flowType: 'pkce', detectSessionInUrl: true, autoRefreshToken: true, persistSession: true }
+      });
+
+      // SSO 쿠키 헬퍼
+      function setSharedSession(rt) {
+        var domain = location.hostname.includes('dreamitbiz.com') ? ';domain=.dreamitbiz.com' : '';
+        var secure = location.protocol === 'https:' ? ';Secure' : '';
+        document.cookie = SSO_KEY + '=' + rt + ';path=/' + domain + ';max-age=2592000;SameSite=Lax' + secure;
+      }
+      function getSharedSession() {
+        var m = document.cookie.match(new RegExp('(?:^|; )' + SSO_KEY + '=([^;]+)'));
+        return m ? m[1] : null;
+      }
+      function clearSharedSession() {
+        var domain = location.hostname.includes('dreamitbiz.com') ? ';domain=.dreamitbiz.com' : '';
+        document.cookie = SSO_KEY + '=;path=/' + domain + ';max-age=0';
+      }
 
       // Auth 상태 감지
       sbMain.auth.onAuthStateChange(function(event, session) {
+        // SSO 쿠키 동기화
+        if (session && session.refresh_token) setSharedSession(session.refresh_token);
+        if (event === 'SIGNED_OUT') clearSharedSession();
+
         if (event === 'TOKEN_REFRESHED') return;
-        const loginBtn  = document.getElementById('main-login-btn');
-        const navUser   = document.getElementById('main-nav-user');
-        const logoutBtn = document.getElementById('main-logout-btn');
-        const avatar    = document.getElementById('main-avatar');
-        const username  = document.getElementById('main-username');
+
+        var loginBtn  = document.getElementById('main-login-btn');
+        var navUser   = document.getElementById('main-nav-user');
+        var logoutBtn = document.getElementById('main-logout-btn');
+        var avatar    = document.getElementById('main-avatar');
+        var username  = document.getElementById('main-username');
         if (session) {
           loginBtn.style.display  = 'none';
           navUser.style.display   = 'flex';
           logoutBtn.style.display = 'inline-flex';
-          const meta  = session.user.user_metadata || {};
-          const email = session.user.email || '';
-          const name  = meta.full_name || meta.name || (email ? email.split('@')[0] : '');
+          var meta  = session.user.user_metadata || {};
+          var email = session.user.email || '';
+          var name  = meta.full_name || meta.name || (email ? email.split('@')[0] : '');
           avatar.textContent   = name.charAt(0).toUpperCase();
           username.textContent = name;
+          closeMainAuthModal();
+
+          // user_profiles 글로벌 기록
+          var currentDomain = location.hostname;
+          sbMain.from('user_profiles').upsert({
+            id: session.user.id,
+            email: email,
+            name: name,
+            display_name: name,
+            provider: session.user.app_metadata && session.user.app_metadata.provider || 'email',
+            signup_domain: currentDomain,
+            visited_sites: [currentDomain]
+          }, { onConflict: 'id' });
 
           // 관리자: 대시보드 링크 표시
-          const dashLink = document.getElementById('main-dash-link');
-          if (email === 'radica8566@gmail.com' && dashLink) {
+          var dashLink = document.getElementById('main-dash-link');
+          if ((email === 'radical8566@gmail.com' || email === 'aebon@kakao.com') && dashLink) {
             dashLink.style.display = 'inline-flex';
           }
         } else {
           loginBtn.style.display  = 'inline-flex';
           navUser.style.display   = 'none';
           logoutBtn.style.display = 'none';
-          const dashLink = document.getElementById('main-dash-link');
-          if (dashLink) dashLink.style.display = 'none';
+          var dashLink2 = document.getElementById('main-dash-link');
+          if (dashLink2) dashLink2.style.display = 'none';
+        }
+
+        // SSO 복원: 세션 없으면 쿠키에서 복원 시도
+        if (event === 'INITIAL_SESSION' && !session) {
+          var rt = getSharedSession();
+          if (rt) {
+            sbMain.auth.refreshSession({ refresh_token: rt }).then(function(res) {
+              if (!res.data.session) clearSharedSession();
+            }).catch(function() { clearSharedSession(); });
+          }
         }
       });
 
@@ -718,10 +764,12 @@
       };
       window.mainSignInKakao = function() {
         sbMain.auth.signInWithOAuth({ provider: 'kakao',
-          options: { redirectTo: location.origin + location.pathname } });
+          options: { redirectTo: location.origin + location.pathname,
+                     scopes: 'profile_nickname profile_image account_email' } });
       };
       window.mainSignOut = function() {
         sbMain.auth.signOut();
+        clearSharedSession();
       };
 
       // 모달 외부 클릭 닫기
